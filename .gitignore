@@ -1,0 +1,6 @@
+*.jpg
+*.csv
+*.h5
+cnn_model/
+data/
+saliency_map/

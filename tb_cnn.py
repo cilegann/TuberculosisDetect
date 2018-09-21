@@ -1,0 +1,426 @@
+
+# coding: utf-8
+
+
+import tensorflow as tf
+import os
+import keras
+from keras import utils as np_utils
+from keras import Sequential
+from keras.models import load_model
+from keras.utils import multi_gpu_model
+from keras.layers import Activation,Dense,Dropout,MaxPooling2D,Flatten,Conv2D
+from keras.optimizers import rmsprop,adam
+import keras.losses
+from keras.layers.normalization import BatchNormalization
+from keras.callbacks import EarlyStopping,ReduceLROnPlateau,ModelCheckpoint
+from keras.preprocessing.image import ImageDataGenerator
+import numpy as np
+from PIL import Image
+import random
+import math
+import matplotlib.pyplot as plt
+import cv2
+import platform
+
+
+host = platform.node()  #cilegann-PC / ican-1080ti
+mode = os.sys.argv[1] #train / predict / saliencymap
+if(host=='1080ti' and mode=='train'):
+    gpu = os.sys.argv[2] #single / both
+else:
+    gpu='single'
+
+model_to_load=''
+if(mode=='predict' or mode=='saliencymap'):
+    model_to_load=os.sys.argv[2]
+
+if(gpu=='single'):
+    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+
+positive_weigt=15.
+polluted_weight=4.5
+negative_weight=1.4
+height=131
+width=420
+train_mapping_file='./data/CNN_x_y_mapping.csv'
+vali_mapping_file='./data/CNN_vali_x_y_mapping.csv'
+if (host=='cilegann-PC'):
+    polluted_train_basedir='./original_data/categ/polluted'
+    positive_train_basedir='./original_data/categ/positive'
+    negative_train_basedir='./original_data/categ/negative'
+    polluted_vali_basedir='./data/x'
+    positive_vali_basedir='./data/p'
+    negative_vali_basedir='./data/n'
+if (host=='ican-1080ti'):
+    polluted_train_basedir='./data/polluted'
+    positive_train_basedir='./data/positive'
+    negative_train_basedir='./data/negative'
+    polluted_vali_basedir='./data/vali/x'
+    positive_vali_basedir='./data/vali/p'
+    negative_vali_basedir='./data/vali/n'
+
+if(host=='cilegann-PC' or gpu=='single'):
+    batch_size=32
+else:
+    batch_size=64
+epoch=200
+vali_split=0.3
+
+index = 0
+vali_index = 0
+
+train_x_file_list = []
+train_x = []
+train_y = []
+
+vali_x_file_list = []
+vali_x=[]
+vali_y = []
+
+def create_x_y_mapping(train_or_vali):
+    if(train_or_vali == 'train'):
+        with open(train_mapping_file,'w') as f:
+            f.write("file_path,label\n")
+            for root,directs,filenames in os.walk(positive_train_basedir):
+                for filename in filenames:
+                    pathName=os.path.join(root,filename)
+                    if( ('jpg' in pathName) or ('png' in pathName) ):
+                        f.write(pathName+',1\n')
+            for root,directs,filenames in os.walk(negative_train_basedir):
+                for filename in filenames:
+                    pathName=os.path.join(root,filename)
+                    if( ('jpg' in pathName) or ('png' in pathName) ):
+                        f.write(pathName+',0\n')
+            for root,directs,filenames in os.walk(polluted_train_basedir):
+                for filename in filenames:
+                    pathName=os.path.join(root,filename)
+                    if( ('jpg' in pathName) or ('png' in pathName) ):
+                        f.write(pathName+',2\n')
+    else:
+        with open(vali_mapping_file,'w') as f:
+            f.write("file_path,label\n")
+            for root,directs,filenames in os.walk(positive_vali_basedir):
+                for filename in filenames:
+                    pathName=os.path.join(root,filename)
+                    if( ('jpg' in pathName) or ('png' in pathName) ):
+                        f.write(pathName+',1\n')
+            for root,directs,filenames in os.walk(negative_vali_basedir):
+                for filename in filenames:
+                    pathName=os.path.join(root,filename)
+                    if( ('jpg' in pathName) or ('png' in pathName) ):
+                        f.write(pathName+',0\n')
+            for root,directs,filenames in os.walk(polluted_vali_basedir):
+                for filename in filenames:
+                    pathName=os.path.join(root,filename)
+                    if( ('jpg' in pathName) or ('png' in pathName) ):
+                        f.write(pathName+',2\n')
+
+def read_x_y_mapping(train_or_vali,shuffle):
+    if(train_or_vali=='train'):
+        global train_x_file_list
+        global train_y
+        train_x_file_list=[]
+        train_y=[]
+        if( not os.path.exists(train_mapping_file)):
+            create_x_y_mapping('train')
+        with open(train_mapping_file,'r') as f:
+            next(f)
+            lines=f.readlines()
+            for line in lines:
+                train_x_file_list.append(line.split(',')[0])
+                train_y.append(line.split(',')[1][:-1])
+        if(shuffle):
+            c = list(zip(train_x_file_list, train_y))
+            random.shuffle(c)
+            train_x_file_list, train_y = zip(*c)
+        train_y = np.array(train_y)
+        train_y = np_utils.to_categorical(train_y,3)
+    else:
+        global vali_x_file_list
+        global vali_y
+        vali_x_file_list=[]
+        vali_y=[]
+        if( not os.path.exists(vali_mapping_file)):
+            create_x_y_mapping('vali')
+        with open(vali_mapping_file,'r') as f:
+            next(f)
+            lines=f.readlines()
+            for line in lines:
+                vali_x_file_list.append(line.split(',')[0])
+                vali_y.append(line.split(',')[1][:-1])
+        if(shuffle):
+            c = list(zip(vali_x_file_list, vali_y))
+            random.shuffle(c)
+            vali_x_file_list, vali_y = zip(*c)
+        vali_y = np.array(vali_y)
+        vali_y = np_utils.to_categorical(vali_y,3)
+
+def plot_confusion_matrix(cm,classes,title='Confusion matrix',cmap=plt.cm.Blues,normalize=True):
+    if(normalize):
+        cm=cm.astype('float')/cm.sum(axis=1)[:,np.newaxis]
+    plt.imshow(cm,interpolation='nearest',cmap=cmap)
+    plt.title(title)
+    plt.colorbar()
+    tick_marks=np.arange(len(classes))
+    plt.xticks(tick_marks,classes,rotation=45)
+    plt.yticks(tick_marks,classes)
+    #thresh=cm.max()
+    plt.tight_layout()
+    plt.ylabel("True")
+    plt.xlabel("Predict")
+
+def load_all_valid():
+    global vali_x
+    vali_x = np.zeros([len(vali_x_file_list), height, width, 3])
+    for i,f in enumerate(vali_x_file_list):
+        vali_x[i]=Image.open(f).resize([width,height])
+    vali_x=vali_x.astype('float64')
+    vali_x/=255.
+
+def generate_valid_from_train():
+    global train_x_file_list
+    global train_y
+    global vali_x_file_list
+    global vali_y
+    vali_x_file_list = train_x_file_list[ :math.ceil(len(train_x_file_list)*vali_split) ]
+    vali_y = train_y [ :math.ceil(len(train_x_file_list)*vali_split) ]
+    train_x_file_list = train_x_file_list [math.floor(len(train_x_file_list)*vali_split):]
+    train_y = train_y [math.floor(len(train_x_file_list)*vali_split):]
+
+def resize_preprocessing(data,label):
+    data=data.resize([width,height])
+    data = np.asarray(data)
+    data = data.astype('float64')
+    
+    if (random.random() > 0.5 and int(label[1])==1):
+        data = cv2.flip(data, 1)
+    data/=255.
+    return data
+
+def data_generator(is_training):
+    global index
+    global vali_index
+    while(1):
+        if is_training == True:
+            if index + batch_size > len(train_x_file_list):
+                index = 0
+            file_list = train_x_file_list[index:index + batch_size]
+            label_list = train_y[index:index + batch_size]
+            index += batch_size
+        else:
+            if vali_index + batch_size > len(vali_x_file_list):
+                vali_index = 0
+            file_list = vali_x_file_list[vali_index:vali_index + batch_size]
+            label_list = vali_y[vali_index:vali_index + batch_size]
+            vali_index += batch_size
+        output = np.zeros([batch_size, height,width, 3])
+        for i in range(batch_size):
+            output[i]=resize_preprocessing(Image.open(file_list[i]),label_list[i])
+
+        yield output, label_list
+
+
+def get_model():
+    model = Sequential()
+
+    model.add(Conv2D(64,(2,2),strides=(1,1),input_shape=(height,width,3),data_format='channels_last'))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+    model.add(Conv2D(64,(2,2),strides=(1,1),data_format='channels_last'))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+    model.add(MaxPooling2D(2,2))
+
+
+    model.add(Conv2D(128,(2,2),strides=(1,1),data_format='channels_last'))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+    model.add(Conv2D(128,(2,2),strides=(1,1),data_format='channels_last'))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+    model.add(MaxPooling2D(2,2))
+
+    model.add(Conv2D(256,(2,2),strides=(1,1),data_format='channels_last'))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+    model.add(Conv2D(256,(2,2),strides=(1,1),data_format='channels_last'))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+    model.add(MaxPooling2D(2,2))
+
+    model.add(Flatten())
+    model.add(Dropout(0.3))
+
+    model.add(Dense(512))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+
+    model.add(Dense(512))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+
+    model.add(Dense(3))
+    model.add(Activation('softmax'))
+
+    model.summary()
+    return model
+
+def training(model):
+    es=EarlyStopping(monitor='val_loss', patience=30, verbose=0, mode='auto')
+    #rlr=ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=10, verbose=0, mode='auto', epsilon=0.0001, cooldown=0, min_lr=0)
+    mck=ModelCheckpoint(filepath='cnn_model_best.h5',monitor='val_loss',save_best_only=True)
+    if(host=='ican-1080ti' and gpu == 'both'):
+        model = multi_gpu_model(model, gpus=2)
+    class_weight = {0: negative_weight,1: positive_weigt,2: polluted_weight}
+    model.compile(loss='categorical_crossentropy',optimizer='adam',metrics=['accuracy'])
+    model.fit_generator(data_generator(True),validation_data=(vali_x,vali_y),validation_steps=1,steps_per_epoch=len(train_x_file_list)//batch_size, epochs=epoch,callbacks=[mck,es],class_weight=class_weight)
+    model.save('cnn_model.h5')
+    
+def predict():
+    global vali_x
+    global model_to_load
+    if(model_to_load==''):
+        model_to_load='cnn_model_best.h5'
+    model=load_model(model_to_load)
+    read_x_y_mapping('vali',False)
+    load_all_valid()
+    loss, accuracy = model.evaluate(vali_x, vali_y)
+    print("loss: "+str(loss))
+    print("accu: "+str(accuracy))
+    prob_y = model.predict(vali_x)
+    y_true=[]
+    y_pred=[]
+    with open('result.csv','w') as file:
+        file.write("filename,real_value,pred_value\n")
+        for i,p in enumerate(vali_x_file_list):
+            file.write(p+","+str(np.argmax(vali_y[i]))+","+str(np.argmax(prob_y[i]))+'\n')
+            print(str(i)+" "+ str(np.argmax(vali_y[i])) +" -> "+str(np.argmax(prob_y[i])))
+            
+            if( np.argmax(vali_y[i])==0 ):
+                y_true.append("negative")
+            elif( np.argmax(vali_y[i])==2 ):
+                y_true.append("positive")
+            else:
+                y_true.append("polluted")
+            
+            if( np.argmax(prob_y[i])==0 ):
+                y_pred.append("negative")
+            elif( np.argmax(prob_y[i])==2 ):
+                y_pred.append("positive")
+            else:
+                y_pred.append("polluted")
+    labels=["negative", "positive", "polluted"]
+    plt.figure()
+    from sklearn.metrics import confusion_matrix
+    cm = confusion_matrix(y_true,y_pred)
+    plot_confusion_matrix(cm,classes=labels,title='Confusion matrix')
+    plt.show()
+
+def saliency_map():
+    import keras.backend as K
+    global vali_x
+    global model_to_load
+    file_list=[]
+    dataset=os.sys.argv[3]
+
+    model=load_model(model_to_load)
+    np.seterr(divide='ignore',invalid='ignore')
+    
+    if(dataset=='vali'):
+        read_x_y_mapping('vali',False)
+        #load_all_valid()
+        file_list=vali_x_file_list
+        
+    if(dataset=='train'):
+        portion=int(os.sys.argv[4]) # 0 / 1 / 2
+        amount=int(os.sys.argv[5])
+        read_x_y_mapping('train',True)
+        vali_x = np.zeros([amount, height,width, 3])
+        n=0
+        for i in range(len(train_x_file_list)):
+            if(train_y[i][portion]==1.):
+                print("Appending "+train_x_file_list[i])
+                file_list.append(train_x_file_list[i])
+                vali_x[n]=(Image.open(train_x_file_list[i]).resize([width,height]))
+                n+=1
+            if(n>=amount):
+                break
+        vali_x=vali_x.astype('float64')
+        vali_x/=255.
+
+    input_img = model.input
+    for i,img in enumerate(vali_x):
+        print("Creating saliency map of "+str(i)+' -> '+file_list[i])
+        plt.figure()
+        plt.imshow(img)
+        plt.tight_layout()
+        plt.ylim(140,0)
+        plt.xlim(0,430)
+        fig=plt.gcf()
+        plt.draw()
+        fig.savefig('./saliency_map/'+str(i)+'_origin.png')
+        plt.close()
+        
+        val_prob=model.predict(img.reshape(1,height,width,3))
+        pred=np.argmax(val_prob[0])
+        target=K.mean(model.output[:,pred])
+        grads=K.gradients(target,input_img)[0]
+        fn=K.function([input_img,K.learning_phase()],[grads])
+
+        heatmap = fn([(img).reshape(1,width,height,3),0])
+        
+        heatmap = heatmap[0]
+        heatmap = np.abs(heatmap)
+        heatmap -= heatmap.mean()
+        heatmap /= (heatmap.std()+1e-10)
+        heatmap *= 0.1
+        heatmap += 0.5
+        heatmap = np.clip(heatmap,0,1)
+        heatmap /= np.max(heatmap)
+        
+        thres=0.5
+        see=img.reshape(height,width,3)
+        heatmap=heatmap.reshape(height,width,3)
+        see[np.where(heatmap<=thres)]=np.mean(see)
+        plt.figure()
+        plt.imshow(heatmap)
+        #plt.colorbar()
+
+        plt.tight_layout()
+        fig = plt.gcf()
+        plt.draw()
+        fig.savefig('./saliency_map/'+str(i)+'_heatmap.png')
+        plt.close()
+
+        plt.figure()
+        plt.imshow(see)
+        #plt.colorbar()
+        plt.ylim(140,0)
+        plt.xlim(0,430)
+        plt.tight_layout()
+        fig = plt.gcf()
+        plt.draw()
+        fig.savefig('./saliency_map/'+str(i)+'_mask.png')
+        plt.close()
+
+def main():
+    if(mode=='train'):
+        read_x_y_mapping('train',True)
+        read_x_y_mapping('vali',False)
+        load_all_valid()
+        print(np.shape(vali_x))
+        if(host=='ican-1080ti' and gpu =='both'):
+            with tf.device('/cpu:0'):
+                model=get_model()
+        else:
+            model=get_model()
+        training(model)
+        predict()
+    elif(mode=='predict'):
+        predict()
+    elif(mode=='saliencymap'):
+        saliency_map()
+if __name__ == "__main__":
+    main()
+
