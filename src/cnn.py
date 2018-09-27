@@ -22,7 +22,11 @@ import math
 import matplotlib.pyplot as plt
 import cv2
 import platform
+import shutil
 
+#train : python3 scriptname train [single/both]
+#predict: python3 scriptname predict [modelname]
+#saliencymap: python3 scriptname saliencymap [modelname] [dataset] [portion] [amount] [save/show]
 
 host = platform.node()  #cilegann-PC / ican-1080ti
 mode = os.sys.argv[1] #train / predict / saliencymap
@@ -77,6 +81,7 @@ train_y = []
 vali_x_file_list = []
 vali_x=[]
 vali_y = []
+prob_y=[]
 
 def create_x_y_mapping(train_or_vali):
     if(train_or_vali == 'train'):
@@ -224,39 +229,32 @@ def data_generator(is_training):
 def get_model():
     model = Sequential()
 
-    model.add(Conv2D(64,(2,2),strides=(1,1),input_shape=(height,width,3),data_format='channels_last'))
+    model.add(Conv2D(32,(3,3),strides=(1,1),input_shape=(height,width,3),data_format='channels_last'))
     model.add(Activation('relu'))
     model.add(BatchNormalization())
-    model.add(Conv2D(64,(2,2),strides=(1,1),data_format='channels_last'))
-    model.add(Activation('relu'))
-    model.add(BatchNormalization())
-    model.add(MaxPooling2D(2,2))
-
-
-    model.add(Conv2D(128,(2,2),strides=(1,1),data_format='channels_last'))
-    model.add(Activation('relu'))
-    model.add(BatchNormalization())
-    model.add(Conv2D(128,(2,2),strides=(1,1),data_format='channels_last'))
+    model.add(Conv2D(32,(3,3),strides=(1,1)))
     model.add(Activation('relu'))
     model.add(BatchNormalization())
     model.add(MaxPooling2D(2,2))
 
-    model.add(Conv2D(256,(2,2),strides=(1,1),data_format='channels_last'))
+
+    model.add(Conv2D(64,(3,3),strides=(1,1)))
     model.add(Activation('relu'))
     model.add(BatchNormalization())
-    model.add(Conv2D(256,(2,2),strides=(1,1),data_format='channels_last'))
+    model.add(Conv2D(64,(3,3),strides=(1,1)))
     model.add(Activation('relu'))
     model.add(BatchNormalization())
     model.add(MaxPooling2D(2,2))
+
 
     model.add(Flatten())
     model.add(Dropout(0.3))
 
-    model.add(Dense(512))
+    model.add(Dense(1024))
     model.add(Activation('relu'))
     model.add(BatchNormalization())
 
-    model.add(Dense(512))
+    model.add(Dense(1024))
     model.add(Activation('relu'))
     model.add(BatchNormalization())
 
@@ -280,9 +278,11 @@ def training(model):
 def predict():
     global vali_x
     global model_to_load
+    global prob_y
     if(model_to_load==''):
         model_to_load='cnn_model_best.h5'
     model=load_model(model_to_load)
+    model.summary()
     read_x_y_mapping('vali',False)
     load_all_valid()
     loss, accuracy = model.evaluate(vali_x, vali_y)
@@ -317,23 +317,40 @@ def predict():
     plot_confusion_matrix(cm,classes=labels,title='Confusion matrix')
     plt.show()
 
-def saliency_map():
+def saliency_map(mode,backprop_modifier=None,grad_modifier="absolute"):
+    shutil.rmtree("./saliency_map/")
+    os.mkdir("saliency_map")
     import keras.backend as K
+    from vis.visualization import visualize_saliency, visualize_cam
+    import scipy.ndimage as ndimage
     global vali_x
+    global vali_y
+    global prob_y
     global model_to_load
     file_list=[]
     dataset=os.sys.argv[3]
-
+    portion=[]
     model=load_model(model_to_load)
     np.seterr(divide='ignore',invalid='ignore')
     
     if(dataset=='vali'):
-        read_x_y_mapping('vali',False)
-        #load_all_valid()
+        predict()
+        amount=len(vali_x_file_list)
         file_list=vali_x_file_list
         
+        # for i in range(len(vali_x_file_list)):
+        #     if(vali_y[i][portion]==1.):
+        #         print("Appending "+vali_x_file_list[i])
+        #         file_list.append(vali_x_file_list[i])
+        #         vali_x[n]=Image.open(vali_x_file_list[i]).resize([width,height])
+        #         n+=1
+        #     if(n>=amount):
+        #         break
+        # vali_x=vali_x.astype('float64')
+        # vali_x/=255.
+        
     if(dataset=='train'):
-        portion=int(os.sys.argv[4]) # 0 / 1 / 2
+        portion=(int(os.sys.argv[4]))
         amount=int(os.sys.argv[5])
         read_x_y_mapping('train',True)
         vali_x = np.zeros([amount, height,width, 3])
@@ -351,59 +368,22 @@ def saliency_map():
 
     input_img = model.input
     for i,img in enumerate(vali_x):
-        print("Creating saliency map of "+str(i)+' -> '+file_list[i])
-        plt.figure()
+        if(dataset=='vali'):
+            portion=np.argmax(prob_y[i])
+        print("Creating saliency map of "+str(i)+' -> '+file_list[i]+', class='+str(portion))
+        filename='./saliency_map/'+str(i)+'_predclass='+str(portion)+'_trueclass='+str(np.argmax(vali_y[i]))
+        heatmap = visualize_cam(model, layer_idx=-1, filter_indices=portion, seed_input=img,backprop_modifier=backprop_modifier,grad_modifier=grad_modifier)
         plt.imshow(img)
-        plt.tight_layout()
-        plt.ylim(140,0)
-        plt.xlim(0,430)
-        fig=plt.gcf()
-        plt.draw()
-        fig.savefig('./saliency_map/'+str(i)+'_origin.png')
-        plt.close()
-        
-        val_prob=model.predict(img.reshape(1,height,width,3))
-        pred=np.argmax(val_prob[0])
-        target=K.mean(model.output[:,pred])
-        grads=K.gradients(target,input_img)[0]
-        fn=K.function([input_img,K.learning_phase()],[grads])
-
-        heatmap = fn([(img).reshape(1,width,height,3),0])
-        
-        heatmap = heatmap[0]
-        heatmap = np.abs(heatmap)
-        heatmap -= heatmap.mean()
-        heatmap /= (heatmap.std()+1e-10)
-        heatmap *= 0.1
-        heatmap += 0.5
-        heatmap = np.clip(heatmap,0,1)
-        heatmap /= np.max(heatmap)
-        
-        thres=0.5
-        see=img.reshape(height,width,3)
-        heatmap=heatmap.reshape(height,width,3)
-        see[np.where(heatmap<=thres)]=np.mean(see)
-        plt.figure()
-        plt.imshow(heatmap)
-        #plt.colorbar()
-
-        plt.tight_layout()
-        fig = plt.gcf()
-        plt.draw()
-        fig.savefig('./saliency_map/'+str(i)+'_heatmap.png')
-        plt.close()
-
-        plt.figure()
-        plt.imshow(see)
-        #plt.colorbar()
-        plt.ylim(140,0)
-        plt.xlim(0,430)
-        plt.tight_layout()
-        fig = plt.gcf()
-        plt.draw()
-        fig.savefig('./saliency_map/'+str(i)+'_mask.png')
-        plt.close()
-
+        if(mode=='show'):
+            plt.show()
+        else:
+            plt.savefig(filename+'.jpg',dpi=100)
+        im1=plt.imshow(img, cmap=plt.cm.gray, interpolation='nearest')
+        im2 = plt.imshow(heatmap,  alpha=.4, interpolation='bilinear')
+        if(mode=='show'):
+            plt.show()
+        else:
+            plt.savefig(filename+'_heatmap.jpg',dpi=100)
 def main():
     if(mode=='train'):
         read_x_y_mapping('train',True)
@@ -420,7 +400,7 @@ def main():
     elif(mode=='predict'):
         predict()
     elif(mode=='saliencymap'):
-        saliency_map()
+        saliency_map(mode='save')
 if __name__ == "__main__":
     main()
 
