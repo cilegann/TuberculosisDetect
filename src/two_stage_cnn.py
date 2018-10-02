@@ -223,10 +223,10 @@ def get_model():
 ###################################################################################
 
 def training(stage):
-    
-    #TODO: prepare data for 2 stage of cassification
-    #TODO: train
-
+    #TODO data of first stage
+    #TODO first stage of training 
+    #TODO data of second stage
+    #TODO second stage of training
 ###################################################################################
 
 def predict();
