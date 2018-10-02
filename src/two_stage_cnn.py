@@ -1,4 +1,4 @@
-# coding: utf-8
+# coding:utf-8
 
 import tensorflow as tf
 import os
@@ -29,22 +29,15 @@ import platform
 from sklearn.metrics import confusion_matrix
 import scipy.ndimage as ndimage
 
-#train : python3 scriptname train [single/both]
-#predict: python3 scriptname predict [modelname]
-#saliencymap: python3 scriptname cam [modelname] [dataset] [portion] [amount] [save/show]
-
-positive_weigt=15.
-polluted_weight=4.5
-negative_weight=1.4
 height=131
 width=420
 epoch=200
 vali_split=0.3
 
-host = platform.node()  #cilegann-PC / ican-1080ti
-mode = os.sys.argv[1] #train / predict / saliencymap
-if(host=='ican-1080ti' and mode=='train'):
-    gpu = os.sys.argv[2] #single / both
+host=platform.node()
+mode=os.sys.argv[1]
+if(host=='ican-1080ti'and mode=='train'):
+    gpu=os.sys.argv[2]
 else:
     gpu='single'
 
@@ -53,10 +46,11 @@ if(mode=='predict' or mode=='cam'):
     model_to_load=os.sys.argv[2]
 
 if(gpu=='single'):
-    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+    os.environ['CUDA_VISIBLE_DEVICES']='0'
 
 train_mapping_file='./data/CNN_x_y_mapping.csv'
 vali_mapping_file='./data/CNN_vali_x_y_mapping.csv'
+
 if (host=='cilegann-PC'):
     polluted_train_basedir='./original_data/categ/polluted'
     positive_train_basedir='./original_data/categ/positive'
@@ -154,18 +148,6 @@ def load_all_valid():
 
 ###################################################################################
 
-def generate_valid_from_train():
-    global train_x_file_list
-    global train_y
-    global vali_x_file_list
-    global vali_y
-    vali_x_file_list = train_x_file_list[ :math.ceil(len(train_x_file_list)*vali_split) ]
-    vali_y = train_y [ :math.ceil(len(train_x_file_list)*vali_split) ]
-    train_x_file_list = train_x_file_list [math.floor(len(train_x_file_list)*vali_split):]
-    train_y = train_y [math.floor(len(train_x_file_list)*vali_split):]
-
-###################################################################################
-
 def resize_preprocessing(data,label):
     data=data.resize([width,height])
     data = np.asarray(data)
@@ -232,7 +214,7 @@ def get_model():
     model.add(Activation('relu'))
     model.add(BatchNormalization())
 
-    model.add(Dense(3))
+    model.add(Dense(2))
     model.add(Activation('softmax'))
 
     model.summary()
@@ -240,139 +222,19 @@ def get_model():
 
 ###################################################################################
 
-def training(model):
-    es=EarlyStopping(monitor='val_loss', patience=10, verbose=0, mode='auto')
-    #rlr=ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=10, verbose=0, mode='auto', epsilon=0.0001, cooldown=0, min_lr=0)
-    mck=ModelCheckpoint(filepath='cnn_model_best.h5',monitor='val_loss',save_best_only=True)
-    if(host=='ican-1080ti' and gpu == 'both'):
-        model = multi_gpu_model(model, gpus=2)
-    class_weight = {0: negative_weight,1: positive_weigt,2: polluted_weight}
-    model.compile(loss='categorical_crossentropy',optimizer='adam',metrics=['accuracy'])
-    model.fit_generator(data_generator(True),validation_data=(vali_x,vali_y),validation_steps=1,steps_per_epoch=len(train_x_file_list)//batch_size, epochs=epoch,callbacks=[mck,es],class_weight=class_weight)
-    model.save('cnn_model.h5')
-
-###################################################################################
-
-def plot_confusion_matrix(cmx,classes,title='Confusion matrix',cmap=plt.cm.Blues):
-    plt.imshow(cmx,interpolation='nearest',cmap=cmap)
-    plt.title(title)
-    plt.colorbar()
-    tick_marks=np.arange(len(classes))
-    plt.xticks(tick_marks,classes,rotation=45)
-    plt.yticks(tick_marks,classes)
-    plt.tight_layout()
-    plt.ylabel("True")
-    plt.xlabel("Predict")
-    plt.savefig('confusion_matrix.png')
-
-###################################################################################
-
-def predict():
-    global vali_x
-    global model_to_load
-    global prob_y
-    global model_to_load
-    if(model_to_load==''):
-        model_to_load='cnn_model_best.h5'
-    model=load_model(model_to_load)
-    model.summary()
-    read_x_y_mapping('vali',False)
-    load_all_valid()
-    loss, accuracy = model.evaluate(vali_x, vali_y)
-    print("loss: "+str(loss))
-    print("accu: "+str(accuracy))
-    prob_y = model.predict(vali_x)
-    y_true=[]
-    y_pred=[]
-    with open('result.csv','w') as file:
-        file.write("filename,real_value,pred_value\n")
-        for i,p in enumerate(vali_x_file_list):
-            file.write(p+","+str(np.argmax(vali_y[i]))+","+str(np.argmax(prob_y[i]))+'\n')
-            print(str(i)+" "+ str(np.argmax(vali_y[i])) +" -> "+str(np.argmax(prob_y[i])))
-            y_true=np.argmax(vali_y,axis=1)
-            y_pred=np.argmax(prob_y,axis=1)
-
-    labels=["negative", "positive", "polluted"]
-    plt.figure()
-    cmx = confusion_matrix(y_true,y_pred)
-    cmx=cmx.astype('float')/cmx.sum(axis=1)[:,np.newaxis]
-    print(cmx)
-    plot_confusion_matrix(cmx,classes=labels,title='Confusion matrix')
-    plt.show()
-
-###################################################################################
-
-def cam(backprop_modifier='guided'):
-    shutil.rmtree("./cam/")
-    os.mkdir("cam")
-    global vali_x
-    global vali_y
-    global prob_y
-    global model_to_load
-    file_list=[]
-    dataset=os.sys.argv[3]
-    portion=[]
-
-    model=load_model(model_to_load)
-    np.seterr(divide='ignore',invalid='ignore')
+def training(stage):
     
-    if(dataset=='vali'):
-        predict()
-        amount=len(vali_x_file_list)
-        file_list=vali_x_file_list
-        
-    if(dataset=='train'):
-        portion=(int(os.sys.argv[4]))
-        amount=int(os.sys.argv[5])
-        read_x_y_mapping('train',True)
-        vali_x = np.zeros([amount, height,width, 3])
-        n=0
-        for i in range(len(train_x_file_list)):
-            if(train_y[i][portion]==1.):
-                print("Appending "+train_x_file_list[i])
-                file_list.append(train_x_file_list[i])
-                vali_x[n]=(Image.open(train_x_file_list[i]).resize([width,height]))
-                n+=1
-            if(n>=amount):
-                break
-        vali_x=vali_x.astype('float64')
-        vali_x/=255.
+    #TODO: prepare data for 2 stage of cassification
+    #TODO: train
 
-    input_img = model.input
-    for i,img in enumerate(vali_x):
-        if(dataset=='vali'):
-            portion=np.argmax(prob_y[i])
-        print("Creating saliency map of "+str(i)+' -> '+file_list[i]+', class='+str(portion))
-        filename='./cam/'+str(i)+'_'+str(np.argmax(vali_y[i]))+'--'+str(portion)
-        heatmap = visualize_cam(model, layer_idx=-1, filter_indices=portion, seed_input=img,backprop_modifier=backprop_modifier)
-        jet_heatmap = np.uint8(cm.jet(heatmap)[..., :3] * 255)
+###################################################################################
 
-        plt.subplot(1,2,1)
-        plt.imshow(img)
-        plt.subplot(1,2,2)
-        im1=plt.imshow(img, cmap=plt.cm.gray, interpolation='nearest')
-        im2 = plt.imshow(heatmap,  alpha=.4, interpolation='bilinear')
-        plt.savefig(filename+'_heatmap.jpg',dpi=300)
-        
+def predict();
+    #TODO: two stage of prediction
+
 ###################################################################################
 
 def main():
-    if(mode=='train'):
-        read_x_y_mapping('train',True)
-        read_x_y_mapping('vali',False)
-        load_all_valid()
-        print(np.shape(vali_x))
-        if(host=='ican-1080ti' and gpu =='both'):
-            with tf.device('/cpu:0'):
-                model=get_model()
-        else:
-            model=get_model()
-        training(model)
-        predict()
-    elif(mode=='predict'):
-        predict()
-    elif(mode=='cam'):
-        cam()
+    if(mode=='train')
 if __name__ == "__main__":
     main()
-
