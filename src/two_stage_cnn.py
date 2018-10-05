@@ -75,12 +75,16 @@ index = 0
 vali_index = 0
 
 train_x_file_list = []
+train_x_file_list_backup=[]
 train_x = []
 train_y = []
+train_y_backup=[]
 
 vali_x_file_list = []
+vali_x_file_list_backup=[]
 vali_x=[]
 vali_y = []
+vali_y_backup=[]
 prob_y=[]
 
 ###################################################################################
@@ -106,14 +110,14 @@ def create_x_y_mapping(train_or_vali):
 
 def read_x_y_mapping(train_or_vali,shuffle):
     if(train_or_vali=='train'):
-        global train_x_file_list
-        global train_y
+        global train_x_file_list_backup
+        global train_y_backup
         file_list=[]
         y=[]
         mapping_file=train_mapping_file
     else:
-        global vali_x_file_list
-        global vali_y
+        global vali_x_file_list_backup
+        global vali_y_backup
         file_list=[]
         y=[]
         mapping_file=vali_mapping_file
@@ -130,11 +134,11 @@ def read_x_y_mapping(train_or_vali,shuffle):
         random.shuffle(c)
         file_list,y=zip(*c)
     if(train_or_vali=='train'):
-        train_x_file_list=file_list
-        train_y=np_utils.to_categorical(np.array(y),3)
+        train_x_file_list_backup=file_list
+        train_y_backup=np_utils.to_categorical(np.asarray(y),3)
     else:
-        vali_x_file_list=file_list
-        vali_y=np_utils.to_categorical(np.array(y),3)
+        vali_x_file_list_backup=file_list
+        vali_y_backup=np_utils.to_categorical(np.asarray(y),3)
 
 ###################################################################################
 
@@ -145,6 +149,7 @@ def load_all_valid():
         vali_x[i]=Image.open(f).resize([width,height])
     vali_x=vali_x.astype('float64')
     vali_x/=255.
+    #TODO backup
 
 ###################################################################################
 
@@ -222,19 +227,201 @@ def get_model():
 
 ###################################################################################
 
-def training(stage):
-    #TODO data of first stage
-    #TODO first stage of training 
-    #TODO data of second stage
-    #TODO second stage of training
+def generate_new_data(stage):
+    global train_x_file_list
+    global train_x_file_list_backup
+    global train_y
+    global train_y_backup
+    global vali_x_file_list
+    global vali_x_file_list_backup
+    global vali_y
+    global vali_y_backup
+    global vali_x
+    train_x_file_list=[]
+    train_y=[]
+    vali_x_file_list=[]
+    vali_y=[]
+    vali_x=[]
+    if(stage=='0_0'):
+        print("Creating set for [ 1- Negative]/[ 0- Positive+Polluted]")
+        #train y and train file list
+        for i,y in enumerate(train_y_backup):
+            if(np.argmax(y)==0):
+                train_x_file_list.append(train_x_file_list_backup[i])
+                train_y.append(1)
+            else:
+                train_x_file_list.append(train_x_file_list_backup[i])
+                train_y.append(0)
+        #vali y and vali file list
+        for i,y in enumerate(vali_y_backup):
+            if(np.argmax(y)==0):
+                vali_x_file_list.append(vali_x_file_list_backup[i])
+                vali_y.append(1)
+            else:
+                vali_x_file_list.append(vali_x_file_list_backup[i])
+                vali_y.append(0)
+        #np util
+        train_y=np_utils.to_categorical(np.asarray(train_y),2)
+        vali_y=np_utils.to_categorical(np.asarray(vali_y),2)
+        #load all vali
+        load_all_valid()
+
+    elif(stage=='0_1'):
+        print("Creating set for [ 1- Positive]/[ 0- Polluted]")
+        #train y and train file list
+        for i,y in enumerate(train_y_backup):
+            if(np.argmax(y)==1):
+                train_x_file_list.append(train_x_file_list_backup[i])
+                train_y.append(1)
+            elif(np.argmax(y)==2):
+                train_x_file_list.append(train_x_file_list_backup[i])
+                train_y.append(0)
+        #vali y and vali file list
+        for i,y in enumerate(vali_y_backup):
+            if(np.argmax(y)==1):
+                vali_x_file_list.append(vali_x_file_list_backup[i])
+                vali_y.append(1)
+            elif(np.argmax(y)==2):
+                vali_x_file_list.append(vali_x_file_list_backup[i])
+                vali_y.append(0)
+        #np util
+        train_y=np_utils.to_categorical(np.asarray(train_y),2)
+        vali_y=np_utils.to_categorical(np.asarray(vali_y),2)
+        #load all vali
+        load_all_valid()
+
+    elif(stage=='1_0'):
+        print("Creating set for [ 1- Polluted]/[ 0- Negative+Positive]")
+        #train y and train file list
+        for i,y in enumerate(train_y_backup):
+            if(np.argmax(y)==2):
+                train_x_file_list.append(train_x_file_list_backup[i])
+                train_y.append(1)
+            else:
+                train_x_file_list.append(train_x_file_list_backup[i])
+                train_y.append(0)
+        #vali y and vali file list
+        for i,y in enumerate(vali_y_backup):
+            if(np.argmax(y)==2):
+                vali_x_file_list.append(vali_x_file_list_backup[i])
+                vali_y.append(1)
+            else:
+                vali_x_file_list.append(vali_x_file_list_backup[i])
+                vali_y.append(0)
+        #np util
+        train_y=np_utils.to_categorical(np.asarray(train_y),2)
+        vali_y=np_utils.to_categorical(np.asarray(vali_y),2)
+        #load all vali
+        load_all_valid()
+ 
+    elif(stage=='1_1'):
+        print("Creating set for [ 1- Negative]/[ 0- Positive]")
+        #train y and train file list
+        for i,y in enumerate(train_y_backup):
+            if(np.argmax(y)==0):
+                train_x_file_list.append(train_x_file_list_backup[i])
+                train_y.append(1)
+            elif(np.argmax(y)==1):
+                train_x_file_list.append(train_x_file_list_backup[i])
+                train_y.append(0)
+        #vali y and vali file list
+        for i,y in enumerate(vali_y_backup):
+            if(np.argmax(y)==0):
+                vali_x_file_list.append(vali_x_file_list_backup[i])
+                vali_y.append(1)
+            elif(np.argmax(y)==1):
+                vali_x_file_list.append(vali_x_file_list_backup[i])
+                vali_y.append(0)
+        #np util
+        train_y=np_utils.to_categorical(np.asarray(train_y),2)
+        vali_y=np_utils.to_categorical(np.asarray(vali_y),2)
+        #load all vali
+        load_all_valid()
+
+    elif(stage=='2_0'):
+        print("Creating set for [ 1- Positive]/[ 0- Negative+Polluted]")
+        #train y and train file list
+        for i,y in enumerate(train_y_backup):
+            if(np.argmax(y)==1):
+                train_x_file_list.append(train_x_file_list_backup[i])
+                train_y.append(1)
+            else:
+                train_x_file_list.append(train_x_file_list_backup[i])
+                train_y.append(0)
+        #vali y and vali file list
+        for i,y in enumerate(vali_y_backup):
+            if(np.argmax(y)==1):
+                vali_x_file_list.append(vali_x_file_list_backup[i])
+                vali_y.append(1)
+            else:
+                vali_x_file_list.append(vali_x_file_list_backup[i])
+                vali_y.append(0)
+        #np util
+        train_y=np_utils.to_categorical(np.asarray(train_y),2)
+        vali_y=np_utils.to_categorical(np.asarray(vali_y),2)
+        #load all vali
+        load_all_valid()
+
+    elif(stage=='2_1'):
+        print("Creating set for [ 1- Negative]/[ 0- Polluted]")
+        #train y and train file list
+        for i,y in enumerate(train_y_backup):
+            if(np.argmax(y)==0):
+                train_x_file_list.append(train_x_file_list_backup[i])
+                train_y.append(1)
+            elif(np.argmax(y)==2):
+                train_x_file_list.append(train_x_file_list_backup[i])
+                train_y.append(0)
+        #vali y and vali file list
+        for i,y in enumerate(vali_y_backup):
+            if(np.argmax(y)==0):
+                vali_x_file_list.append(vali_x_file_list_backup[i])
+                vali_y.append(1)
+            elif(np.argmax(y)==2):
+                vali_x_file_list.append(vali_x_file_list_backup[i])
+                vali_y.append(0)
+        #np util
+        train_y=np_utils.to_categorical(np.asarray(train_y),2)
+        vali_y=np_utils.to_categorical(np.asarray(vali_y),2)
+        #load all vali
+        load_all_valid()
+    else:
+        raise(Exception("UNKNOWN stage : "+stage))
+    return True
+
 ###################################################################################
 
-def predict();
+def training(stage):
+    if(generate_new_data(stage)==False):
+        return
+    #TODO first stage of training
+    model=get_model()
+    es=EarlyStopping(monitor='val_loss', patience=10, verbose=0, mode='auto')
+    mck=ModelCheckpoint(filepath=(stage+'_cnn_model_best.h5'),monitor='val_loss',save_best_only=True)
+    if(host=='ican-1080ti' and gpu == 'both'):
+        model = multi_gpu_model(model, gpus=2)
+    #TODO class weight
+    class_weight = {0:1,1:1}
+    model.compile(loss='categorical_crossentropy',optimizer='adam',metrics=['accuracy'])
+    model.fit_generator(data_generator(True),validation_data=(vali_x,vali_y),validation_steps=1,steps_per_epoch=len(train_x_file_list)//batch_size, epochs=epoch,callbacks=[mck,es],class_weight=class_weight)
+    model.save(stage+'_cnn_model.h5')
+    #TODO clear all training set and validation set
+###################################################################################
+
+def predict():
     #TODO: two stage of prediction
+    print()
 
 ###################################################################################
 
 def main():
-    if(mode=='train')
+    if(mode=='train'):
+        sets=['0_0','0_1','1_0','1_1','2_0','2_1']
+        print("\n   <<< Training mode >>>")
+        read_x_y_mapping('train',True)
+        read_x_y_mapping('vali',False)
+        for s in sets:
+            print("\n   <<< Training "+s+" >>>")
+            training(s)
 if __name__ == "__main__":
     main()

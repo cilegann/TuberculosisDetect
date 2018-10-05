@@ -51,7 +51,6 @@ else:
 model_to_load=''
 if(mode=='predict' or mode=='cam'):
     model_to_load=os.sys.argv[2]
-
 if(gpu=='single'):
     os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
@@ -253,7 +252,13 @@ def training(model):
 
 ###################################################################################
 
-def plot_confusion_matrix(cmx,classes,title='Confusion matrix',cmap=plt.cm.Blues):
+def plot_confusion_matrix(y_true,y_pred,classes,title='Confusion matrix',cmap=plt.cm.Blues):
+    labels=["negative", "positive", "polluted"]
+    plt.figure()
+    cmx = confusion_matrix(y_true,y_pred)
+    cmx=cmx.astype('float')/cmx.sum(axis=1)[:,np.newaxis]
+    print(cmx)
+    plt.show()
     plt.imshow(cmx,interpolation='nearest',cmap=cmap)
     plt.title(title)
     plt.colorbar()
@@ -291,68 +296,25 @@ def predict():
             print(str(i)+" "+ str(np.argmax(vali_y[i])) +" -> "+str(np.argmax(prob_y[i])))
             y_true=np.argmax(vali_y,axis=1)
             y_pred=np.argmax(prob_y,axis=1)
-
-    labels=["negative", "positive", "polluted"]
-    plt.figure()
-    cmx = confusion_matrix(y_true,y_pred)
-    cmx=cmx.astype('float')/cmx.sum(axis=1)[:,np.newaxis]
-    print(cmx)
-    plot_confusion_matrix(cmx,classes=labels,title='Confusion matrix')
-    plt.show()
+    return y_true,y_pred
 
 ###################################################################################
 
-def cam(backprop_modifier='guided'):
+def cam(filename,img,label,model,backprop_modifier='guided'):
     shutil.rmtree("./cam/")
     os.mkdir("cam")
-    global vali_x
-    global vali_y
-    global prob_y
-    global model_to_load
-    file_list=[]
-    dataset=os.sys.argv[3]
-    portion=[]
-
-    model=load_model(model_to_load)
     np.seterr(divide='ignore',invalid='ignore')
     
-    if(dataset=='vali'):
-        predict()
-        amount=len(vali_x_file_list)
-        file_list=vali_x_file_list
-        
-    if(dataset=='train'):
-        portion=(int(os.sys.argv[4]))
-        amount=int(os.sys.argv[5])
-        read_x_y_mapping('train',True)
-        vali_x = np.zeros([amount, height,width, 3])
-        n=0
-        for i in range(len(train_x_file_list)):
-            if(train_y[i][portion]==1.):
-                print("Appending "+train_x_file_list[i])
-                file_list.append(train_x_file_list[i])
-                vali_x[n]=(Image.open(train_x_file_list[i]).resize([width,height]))
-                n+=1
-            if(n>=amount):
-                break
-        vali_x=vali_x.astype('float64')
-        vali_x/=255.
+    filename='./cam/'+filename+'.jpg'
+    heatmap = visualize_cam(model, layer_idx=-1, filter_indices=label, seed_input=img,backprop_modifier=backprop_modifier)
+    jet_heatmap = np.uint8(cm.jet(heatmap)[..., :3] * 255)
 
-    input_img = model.input
-    for i,img in enumerate(vali_x):
-        if(dataset=='vali'):
-            portion=np.argmax(prob_y[i])
-        print("Creating saliency map of "+str(i)+' -> '+file_list[i]+', class='+str(portion))
-        filename='./cam/'+str(i)+'_'+str(np.argmax(vali_y[i]))+'--'+str(portion)
-        heatmap = visualize_cam(model, layer_idx=-1, filter_indices=portion, seed_input=img,backprop_modifier=backprop_modifier)
-        jet_heatmap = np.uint8(cm.jet(heatmap)[..., :3] * 255)
-
-        plt.subplot(1,2,1)
-        plt.imshow(img)
-        plt.subplot(1,2,2)
-        im1=plt.imshow(img, cmap=plt.cm.gray, interpolation='nearest')
-        im2 = plt.imshow(heatmap,  alpha=.4, interpolation='bilinear')
-        plt.savefig(filename+'_heatmap.jpg',dpi=300)
+    plt.subplot(1,2,1)
+    plt.imshow(img)
+    plt.subplot(1,2,2)
+    im1=plt.imshow(img, cmap=plt.cm.gray, interpolation='nearest')
+    im2 = plt.imshow(heatmap,  alpha=.4, interpolation='bilinear')
+    plt.savefig(filename,dpi=300)
         
 ###################################################################################
 
@@ -370,9 +332,16 @@ def main():
         training(model)
         predict()
     elif(mode=='predict'):
-        predict()
+        y_true,y_pred=predict()
+        labels=["Negative","Positive","Polluted"]
+        plot_confusion_matrix(y_true,y_pred,classes=labels,title='Confusion matrix')
     elif(mode=='cam'):
-        cam()
+        model=load_model(model_to_load)
+        #TODO load imgs
+        imgs=[]
+        y_true,y_pred=predict()
+        for i,img in enumerate(imgs):
+            cam(str(i)+'_'+y_pred[i],img,y_pred[i],model)
 if __name__ == "__main__":
     main()
 
