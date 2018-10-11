@@ -4,11 +4,9 @@ import keras
 from keras import utils as np_utils
 from keras.models import load_model
 from PIL import Image
-from sklearn.metrics import confusion_matrix
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
 import cv2
 import random
+from evaluate_tools import plot_confusion_matrix
 
 host='1080ti' #1080ti / local
 height=131
@@ -62,11 +60,10 @@ def load_all_valid():
     global prob_y
     vali_x = np.zeros([len(vali_x_file_list), height, width, 3])
     prob_y = np.zeros([len(vali_x_file_list),3])
+    vali_x=vali_x.astype('float64')
     prob_y = prob_y.astype('float64')
     for i,f in enumerate(vali_x_file_list):
         vali_x[i]=Image.open(f).resize([width,height])
-    vali_x=vali_x.astype('float64')
-    vali_x/=255.
 
 def resize_preprocessing(data,label):
     data=data.resize([width,height])
@@ -74,19 +71,6 @@ def resize_preprocessing(data,label):
     data = data.astype('float64')
     data/=255.
     return data
-
-def plot_confusion_matrix(cmx,classes,title='Confusion matrix',cmap=plt.cm.Blues):
-    plt.imshow(cmx,interpolation='nearest',cmap=cmap)
-    plt.title(title)
-    plt.colorbar()
-    tick_marks=np.arange(len(classes))
-    plt.xticks(tick_marks,classes,rotation=45)
-    plt.yticks(tick_marks,classes)
-    plt.tight_layout()
-    plt.ylabel("True")
-    plt.xlabel("Predict")
-    plt.savefig('confusion_matrix.png')
-
 
 read_x_y_mapping()
 load_all_valid()
@@ -111,9 +95,4 @@ for i,t in enumerate(y):
     print(str(i)+" "+str(t)+" -> "+str(pred_y[i]))
 
 labels=["negative", "positive", "polluted"]
-plt.figure()
-cmx = confusion_matrix(y,pred_y)
-cmx=cmx.astype('float')/cmx.sum(axis=1)[:,np.newaxis]
-print(cmx)
-plot_confusion_matrix(cmx,classes=labels,title='Confusion matrix')
-plt.show()
+plot_confusion_matrix(y,pred_y,classes=labels)

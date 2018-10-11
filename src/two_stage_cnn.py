@@ -28,7 +28,7 @@ from vis.visualization import visualize_saliency, visualize_cam,overlay
 import platform
 from sklearn.metrics import confusion_matrix
 import scipy.ndimage as ndimage
-
+from evaluate_tools import plot_confusion_matrix
 height=131
 width=420
 epoch=200
@@ -36,14 +36,10 @@ vali_split=0.3
 
 host=platform.node()
 mode=os.sys.argv[1]
-if(host=='ican-1080ti'and mode=='train'):
-    gpu=os.sys.argv[2]
+if(host=='ican-1080ti'and mode=='train' and ('-both' in os.sys.argv)):
+    gpu='both'
 else:
     gpu='single'
-
-model_to_load=''
-if(mode=='predict' or mode=='cam'):
-    model_to_load=os.sys.argv[2]
 
 if(gpu=='single'):
     os.environ['CUDA_VISIBLE_DEVICES']='0'
@@ -79,13 +75,14 @@ train_x_file_list_backup=[]
 train_x = []
 train_y = []
 train_y_backup=[]
+num_of_0=0
+num_of_1=0
 
 vali_x_file_list = []
 vali_x_file_list_backup=[]
 vali_x=[]
 vali_y = []
 vali_y_backup=[]
-prob_y=[]
 
 ###################################################################################
 
@@ -237,11 +234,15 @@ def generate_new_data(stage):
     global vali_y
     global vali_y_backup
     global vali_x
+    global num_of_0
+    global num_of_1
     train_x_file_list=[]
     train_y=[]
     vali_x_file_list=[]
     vali_y=[]
     vali_x=[]
+    num_of_0=0
+    num_of_1=0
     if(stage=='0_0'):
         print("Creating set for [ 1- Negative]/[ 0- Positive+Polluted]")
         #train y and train file list
@@ -249,9 +250,11 @@ def generate_new_data(stage):
             if(np.argmax(y)==0):
                 train_x_file_list.append(train_x_file_list_backup[i])
                 train_y.append(1)
+                num_of_1+=1
             else:
                 train_x_file_list.append(train_x_file_list_backup[i])
                 train_y.append(0)
+                num_of_0+=1
         #vali y and vali file list
         for i,y in enumerate(vali_y_backup):
             if(np.argmax(y)==0):
@@ -273,9 +276,11 @@ def generate_new_data(stage):
             if(np.argmax(y)==1):
                 train_x_file_list.append(train_x_file_list_backup[i])
                 train_y.append(1)
+                num_of_1+=1
             elif(np.argmax(y)==2):
                 train_x_file_list.append(train_x_file_list_backup[i])
                 train_y.append(0)
+                num_of_0+=1
         #vali y and vali file list
         for i,y in enumerate(vali_y_backup):
             if(np.argmax(y)==1):
@@ -297,9 +302,11 @@ def generate_new_data(stage):
             if(np.argmax(y)==2):
                 train_x_file_list.append(train_x_file_list_backup[i])
                 train_y.append(1)
+                num_of_1+=1
             else:
                 train_x_file_list.append(train_x_file_list_backup[i])
                 train_y.append(0)
+                num_of_0+=1
         #vali y and vali file list
         for i,y in enumerate(vali_y_backup):
             if(np.argmax(y)==2):
@@ -321,9 +328,11 @@ def generate_new_data(stage):
             if(np.argmax(y)==0):
                 train_x_file_list.append(train_x_file_list_backup[i])
                 train_y.append(1)
+                num_of_1+=1
             elif(np.argmax(y)==1):
                 train_x_file_list.append(train_x_file_list_backup[i])
                 train_y.append(0)
+                num_of_0+=1
         #vali y and vali file list
         for i,y in enumerate(vali_y_backup):
             if(np.argmax(y)==0):
@@ -345,9 +354,11 @@ def generate_new_data(stage):
             if(np.argmax(y)==1):
                 train_x_file_list.append(train_x_file_list_backup[i])
                 train_y.append(1)
+                num_of_1+=1
             else:
                 train_x_file_list.append(train_x_file_list_backup[i])
                 train_y.append(0)
+                num_of_0+=0
         #vali y and vali file list
         for i,y in enumerate(vali_y_backup):
             if(np.argmax(y)==1):
@@ -369,9 +380,11 @@ def generate_new_data(stage):
             if(np.argmax(y)==0):
                 train_x_file_list.append(train_x_file_list_backup[i])
                 train_y.append(1)
+                num_of_1+=1
             elif(np.argmax(y)==2):
                 train_x_file_list.append(train_x_file_list_backup[i])
                 train_y.append(0)
+                num_of_0+=1
         #vali y and vali file list
         for i,y in enumerate(vali_y_backup):
             if(np.argmax(y)==0):
@@ -394,34 +407,78 @@ def generate_new_data(stage):
 def training(stage):
     if(generate_new_data(stage)==False):
         return
-    #TODO first stage of training
     model=get_model()
     es=EarlyStopping(monitor='val_loss', patience=10, verbose=0, mode='auto')
     mck=ModelCheckpoint(filepath=(stage+'_cnn_model_best.h5'),monitor='val_loss',save_best_only=True)
     if(host=='ican-1080ti' and gpu == 'both'):
         model = multi_gpu_model(model, gpus=2)
-    #TODO class weight
-    class_weight = {0:1,1:1}
+    class_weight = {0:1,1:num_of_0/num_of_1}
     model.compile(loss='categorical_crossentropy',optimizer='adam',metrics=['accuracy'])
     model.fit_generator(data_generator(True),validation_data=(vali_x,vali_y),validation_steps=1,steps_per_epoch=len(train_x_file_list)//batch_size, epochs=epoch,callbacks=[mck,es],class_weight=class_weight)
     model.save(stage+'_cnn_model.h5')
-    #TODO clear all training set and validation set
 ###################################################################################
 
-def predict():
+def predict(form,best=True):
     #TODO: two stage of prediction
-    print()
+    if(best):  
+        model_0='./cnn_model/'+form+'_0_cnn_model_best.h5'
+        model_1='./cnn_model/'+form+'_1_cnn_model_best.h5'
+    else:
+        model_0='./cnn_model/'+form+'_0_cnn_model.h5'
+        model_1='./cnn_model/'+form+'_1_cnn_model.h5'
+    print("=== Predict based on "+model_0+' and '+model_1+' ===')
+    print("Loading "+model_0)
+    model=load_model(model_0)
+    print("Predicting "+model_0)
+    prob_y_0=model.predict(vali_x)
 
+    print("Loading "+model_1)
+    model=load_model(model_1)
+    print("Predicting "+model_1)
+    prob_y_1=model.predict(vali_x)
+
+    print("Merging result")
+    result=np.zeros([len(vali_x_file_list),3])
+    if(form=='0'):
+        for i in range(len(vali_x_file_list)):
+            result[i][0]=prob_y_0[i][1]
+            result[i][1]=prob_y_0[i][0]*prob_y_1[i][1]
+            result[i][2]=prob_y_0[i][0]*prob_y_1[i][0]
+    elif(form=='1'):
+        for i in range(len(vali_x_file_list)):
+            result[i][0]=prob_y_0[i][0]*prob_y_1[i][1]
+            result[i][1]=prob_y_0[i][0]*prob_y_1[i][0]
+            result[i][2]=prob_y_0[i][1]
+    elif(form=='2'):
+        for i in range(len(vali_x_file_list)):
+            result[i][0]=prob_y_0[i][0]*prob_y_1[i][1]
+            result[i][1]=prob_y_0[i][1]
+            result[i][2]=prob_y_0[i][0]*prob_y_1[i][0]
+    y_true=np.argmax(vali_y,axis=1)
+    y_pred=np.argmax(result,axis=1)
+    plot_confusion_matrix(y_true,y_pred,["Negative","Positive","Polluted"])
+        
+
+    
 ###################################################################################
 
 def main():
     if(mode=='train'):
-        sets=['0_0','0_1','1_0','1_1','2_0','2_1']
+        if('-s' in os.sys.argv):
+            s=os.sys.argv[os.sys.argv.index('-s')+1]
+        #sets=['0_1','1_0','1_1','2_0','2_1']
         print("\n   <<< Training mode >>>")
         read_x_y_mapping('train',True)
         read_x_y_mapping('vali',False)
-        for s in sets:
-            print("\n   <<< Training "+s+" >>>")
-            training(s)
+        
+        print("\n   <<< Training "+s+" >>>")
+        training(s)
+    elif(mode=='predict'):
+        read_x_y_mapping('vali',False)
+        vali_x_file_list=vali_x_file_list_backup
+        vali_y=vali_y_backup
+        load_all_valid()
+        form=os.sys.argv[2]
+        predict(form)
 if __name__ == "__main__":
     main()
