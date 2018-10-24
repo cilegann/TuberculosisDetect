@@ -18,6 +18,7 @@ import keras.losses
 from keras.layers.normalization import BatchNormalization
 from keras.callbacks import EarlyStopping,ReduceLROnPlateau,ModelCheckpoint
 from keras.preprocessing.image import ImageDataGenerator
+import keras.backend.tensorflow_backend as KTF
 
 import numpy as np
 from PIL import Image
@@ -42,7 +43,12 @@ else:
     gpu='single'
 
 if(gpu=='single'):
-    os.environ['CUDA_VISIBLE_DEVICES']='0'
+    os.environ['CUDA_VISIBLE_DEVICES']='1'
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth=True
+    session = tf.Session(config=config)
+    KTF.set_session(session)
+    batch_size=32
 
 train_mapping_file='./data/CNN_x_y_mapping.csv'
 vali_mapping_file='./data/CNN_vali_x_y_mapping.csv'
@@ -139,13 +145,13 @@ def read_x_y_mapping(train_or_vali,shuffle):
 
 ###################################################################################
 
-def load_all_valid():
-    global vali_x
-    vali_x = np.zeros([len(vali_x_file_list), height, width, 3])
+def load_all_valid(vali_x_file_list):
+    x = np.zeros([len(vali_x_file_list), height, width, 3])
     for i,f in enumerate(vali_x_file_list):
-        vali_x[i]=Image.open(f).resize([width,height])
-    vali_x=vali_x.astype('float64')
-    vali_x/=255.
+        x[i]=Image.open(f).resize([width,height])
+    x=x.astype('float64')
+    x/=255.
+    return x
     #TODO backup
 
 ###################################################################################
@@ -267,7 +273,7 @@ def generate_new_data(stage):
         train_y=np_utils.to_categorical(np.asarray(train_y),2)
         vali_y=np_utils.to_categorical(np.asarray(vali_y),2)
         #load all vali
-        load_all_valid()
+        load_all_valid(vali_x_file_list)
 
     elif(stage=='0_1'):
         print("Creating set for [ 1- Positive]/[ 0- Polluted]")
@@ -293,7 +299,7 @@ def generate_new_data(stage):
         train_y=np_utils.to_categorical(np.asarray(train_y),2)
         vali_y=np_utils.to_categorical(np.asarray(vali_y),2)
         #load all vali
-        load_all_valid()
+        load_all_valid(vali_x_file_list)
 
     elif(stage=='1_0'):
         print("Creating set for [ 1- Polluted]/[ 0- Negative+Positive]")
@@ -319,7 +325,7 @@ def generate_new_data(stage):
         train_y=np_utils.to_categorical(np.asarray(train_y),2)
         vali_y=np_utils.to_categorical(np.asarray(vali_y),2)
         #load all vali
-        load_all_valid()
+        load_all_valid(vali_x_file_list)
  
     elif(stage=='1_1'):
         print("Creating set for [ 1- Negative]/[ 0- Positive]")
@@ -345,7 +351,7 @@ def generate_new_data(stage):
         train_y=np_utils.to_categorical(np.asarray(train_y),2)
         vali_y=np_utils.to_categorical(np.asarray(vali_y),2)
         #load all vali
-        load_all_valid()
+        load_all_valid(vali_x_file_list)
 
     elif(stage=='2_0'):
         print("Creating set for [ 1- Positive]/[ 0- Negative+Polluted]")
@@ -371,7 +377,7 @@ def generate_new_data(stage):
         train_y=np_utils.to_categorical(np.asarray(train_y),2)
         vali_y=np_utils.to_categorical(np.asarray(vali_y),2)
         #load all vali
-        load_all_valid()
+        load_all_valid(vali_x_file_list)
 
     elif(stage=='2_1'):
         print("Creating set for [ 1- Negative]/[ 0- Polluted]")
@@ -397,7 +403,7 @@ def generate_new_data(stage):
         train_y=np_utils.to_categorical(np.asarray(train_y),2)
         vali_y=np_utils.to_categorical(np.asarray(vali_y),2)
         #load all vali
-        load_all_valid()
+        load_all_valid(vali_x_file_list)
     else:
         raise(Exception("UNKNOWN stage : "+stage))
     return True
@@ -419,7 +425,9 @@ def training(stage):
 ###################################################################################
 
 def predict(form,best=True):
-    #TODO: two stage of prediction
+    global vali_x_file_list
+    global vali_x
+    global vali_y
     if(best):  
         model_0='./cnn_model/'+form+'_0_cnn_model_best.h5'
         model_1='./cnn_model/'+form+'_1_cnn_model_best.h5'
@@ -457,7 +465,12 @@ def predict(form,best=True):
     y_true=np.argmax(vali_y,axis=1)
     y_pred=np.argmax(result,axis=1)
     plot_confusion_matrix(y_true,y_pred,["Negative","Positive","Polluted"])
-        
+    with open('./two_stage_result_'+form+'.csv','w') as file:
+        file.write('file,true,pred,0_0,0_1,1_0,1_1\n')
+        for i in range(len(vali_x_file_list)):
+            file.write(vali_x_file_list[i]+','+str(y_true[i])+','+str(y_pred[i])+','+str(prob_y_0[i][0])+','+str(prob_y_0[i][1])+','+str(prob_y_1[i][0])+','+str(prob_y_1[i][1])+'\n')
+
+
 
     
 ###################################################################################
@@ -474,11 +487,14 @@ def main():
         print("\n   <<< Training "+s+" >>>")
         training(s)
     elif(mode=='predict'):
+        global vali_x_file_list
+        global vali_y
+        global vali_x
         read_x_y_mapping('vali',False)
         vali_x_file_list=vali_x_file_list_backup
         vali_y=vali_y_backup
-        load_all_valid()
+        vali_x=load_all_valid(vali_x_file_list)
         form=os.sys.argv[2]
-        predict(form)
+        predict(form,True)
 if __name__ == "__main__":
     main()

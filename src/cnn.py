@@ -17,6 +17,7 @@ import keras.losses
 from keras.layers.normalization import BatchNormalization
 from keras.callbacks import EarlyStopping,ReduceLROnPlateau,ModelCheckpoint
 from keras.preprocessing.image import ImageDataGenerator
+import keras.backend.tensorflow_backend as KTF
 
 import numpy as np
 from PIL import Image
@@ -47,7 +48,12 @@ model_to_load=''
 if(mode=='predict' or mode=='cam'):
     model_to_load=os.sys.argv[2]
 if(gpu=='single'):
-    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth=True
+    session = tf.Session(config=config)
+    KTF.set_session(session)
+    batch_size=32
 
 train_mapping_file='./data/CNN_x_y_mapping.csv'
 vali_mapping_file='./data/CNN_vali_x_y_mapping.csv'
