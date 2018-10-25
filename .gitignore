@@ -1,6 +1,8 @@
 *.jpg
 *.csv
 *.h5
+*.PNG
+*.png
 cnn_model/
 data/
 saliency_map/
