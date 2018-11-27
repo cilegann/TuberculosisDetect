@@ -33,8 +33,8 @@ positive_weigt=15.
 polluted_weight=4.5
 negative_weight=1.4
 height=131
-width=420
-epoch=200
+width=210
+epoch=100
 vali_split=0.3
 
 host = platform.node()  #cilegann-PC / ican-1080ti
@@ -56,7 +56,7 @@ elif(host=='cilegann-PC'):
     config.gpu_options.allow_growth=True
     session = tf.Session(config=config)
     KTF.set_session(session)
-    batch_size=20
+    batch_size=32
 
 train_mapping_file='./data/CNN_x_y_mapping.csv'
 vali_mapping_file='./data/CNN_vali_x_y_mapping.csv'
@@ -205,32 +205,33 @@ def data_generator(is_training):
 def get_model():
     model = Sequential()
 
-    model.add(Conv2D(32,(3,3),strides=(1,1),input_shape=(height,width,3),data_format='channels_last'))
+    model.add(Conv2D(32,(2,2),strides=(1,1),input_shape=(height,width,3),data_format='channels_last'))
     model.add(Activation('relu'))
     model.add(BatchNormalization())
-    model.add(Conv2D(32,(3,3),strides=(1,1)))
-    model.add(Activation('relu'))
-    model.add(BatchNormalization())
+    # model.add(Conv2D(32,(3,3),strides=(1,1)))
+    # model.add(Activation('relu'))
+    # model.add(BatchNormalization())
     model.add(MaxPooling2D(2,2))
 
-    model.add(Conv2D(64,(3,3),strides=(1,1)))
+    model.add(Conv2D(64,(2,2),strides=(1,1)))
     model.add(Activation('relu'))
     model.add(BatchNormalization())
-    model.add(Conv2D(64,(3,3),strides=(1,1)))
-    model.add(Activation('relu'))
-    model.add(BatchNormalization())
-    #model.add(MaxPooling2D(2,2))
-    model.add(GlobalAveragePooling2D())
-    #model.add(Flatten())
-    #model.add(Dropout(0.3))
+    # model.add(Conv2D(64,(3,3),strides=(1,1)))
+    # model.add(Activation('relu'))
+    # model.add(BatchNormalization())
+    model.add(MaxPooling2D(2,2))
+
+    model.add(Flatten())
+    model.add(Dropout(0.3))
 
     model.add(Dense(32))
     model.add(Activation('relu'))
     model.add(BatchNormalization())
 
-    model.add(Dense(32))
+    model.add(Dense(16))
     model.add(Activation('relu'))
     model.add(BatchNormalization())
+    model.add(Dropout(0.3))
 
     model.add(Dense(3))
     model.add(Activation('softmax'))
