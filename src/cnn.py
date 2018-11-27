@@ -25,7 +25,7 @@ import cv2
 import platform
 
 from evaluate_tools import cam,plot_confusion_matrix
-#train : python3 scriptname train [single/both]
+#train : python3 scriptname train
 #predict: python3 scriptname predict [modelname]
 #saliencymap: python3 scriptname cam [modelname] [dataset] [portion] [amount] [save/show]
 
@@ -39,10 +39,7 @@ vali_split=0.3
 
 host = platform.node()  #cilegann-PC / ican-1080ti
 mode = os.sys.argv[1] #train / predict / saliencymap
-if(host=='ican-1080ti' and mode=='train'):
-    gpu = os.sys.argv[2] #single / both
-else:
-    gpu='single'
+gpu='single'
 
 model_to_load=''
 if(mode=='predict' or mode=='cam'):
@@ -57,22 +54,23 @@ if(gpu=='single'):
 
 train_mapping_file='./data/CNN_x_y_mapping.csv'
 vali_mapping_file='./data/CNN_vali_x_y_mapping.csv'
-if (host=='cilegann-PC'):
-    polluted_train_basedir='./original_data/categ/polluted'
-    positive_train_basedir='./original_data/categ/positive'
-    negative_train_basedir='./original_data/categ/negative'
-    polluted_vali_basedir='./data/polluted'
-    positive_vali_basedir='./data/positive'
-    negative_vali_basedir='./data/negative'
-if (host=='ican-1080ti'):
-    polluted_train_basedir='./data/polluted'
-    positive_train_basedir='./data/positive'
-    negative_train_basedir='./data/negative'
-    polluted_vali_basedir='./data/vali/polluted'
-    positive_vali_basedir='./data/vali/positive'
-    negative_vali_basedir='./data/vali/negative'
 
-if(host=='cilegann-PC' or gpu=='single'):
+# if (host=='cilegann-PC'):
+#     polluted_train_basedir='./original_data/categ/polluted'
+#     positive_train_basedir='./original_data/categ/positive'
+#     negative_train_basedir='./original_data/categ/negative'
+#     polluted_vali_basedir='./data/polluted'
+#     positive_vali_basedir='./data/positive'
+#     negative_vali_basedir='./data/negative'
+# if (host=='ican-1080ti'):
+polluted_train_basedir='./data/polluted'
+positive_train_basedir='./data/positive'
+negative_train_basedir='./data/negative'
+polluted_vali_basedir='./data/vali/polluted'
+positive_vali_basedir='./data/vali/positive'
+negative_vali_basedir='./data/vali/negative'
+
+if(host=='cilegann-PC'):
     batch_size=32
 else:
     batch_size=64
