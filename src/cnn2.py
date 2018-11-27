@@ -33,8 +33,8 @@ positive_weigt=15.
 polluted_weight=4.5
 negative_weight=1.4
 height=131
-width=210
-epoch=100
+width=420
+epoch=200
 vali_split=0.3
 
 host = platform.node()  #cilegann-PC / ican-1080ti
