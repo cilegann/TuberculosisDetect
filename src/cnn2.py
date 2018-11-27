@@ -33,8 +33,13 @@ positive_weigt=15.
 polluted_weight=4.5
 negative_weight=1.4
 height=131
+<<<<<<< HEAD
 width=420
 epoch=200
+=======
+width=315 #2.1
+epoch=150 #1
+>>>>>>> c68aad80fa4965619bb1549489c31a0a0a568fb0
 vali_split=0.3
 
 host = platform.node()  #cilegann-PC / ican-1080ti
@@ -207,17 +212,17 @@ def get_model():
 
     model.add(Conv2D(32,(2,2),strides=(1,1),input_shape=(height,width,3),data_format='channels_last'))
     model.add(Activation('relu'))
-    model.add(BatchNormalization())
-    # model.add(Conv2D(32,(3,3),strides=(1,1)))
-    # model.add(Activation('relu'))
+    # model.add(BatchNormalization())
+    model.add(Conv2D(32,(3,3),strides=(1,1)))
+    model.add(Activation('relu'))
     # model.add(BatchNormalization())
     model.add(MaxPooling2D(2,2))
 
     model.add(Conv2D(64,(2,2),strides=(1,1)))
     model.add(Activation('relu'))
-    model.add(BatchNormalization())
-    # model.add(Conv2D(64,(3,3),strides=(1,1)))
-    # model.add(Activation('relu'))
+    # model.add(BatchNormalization())
+    model.add(Conv2D(64,(3,3),strides=(1,1)))
+    model.add(Activation('relu'))
     # model.add(BatchNormalization())
     model.add(MaxPooling2D(2,2))
 
