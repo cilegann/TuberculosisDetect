@@ -33,8 +33,13 @@ positive_weigt=15.
 polluted_weight=4.5
 negative_weight=1.4
 height=131
+<<<<<<< HEAD
+width=420
+epoch=200
+=======
 width=315 #2.1
 epoch=150 #1
+>>>>>>> c68aad80fa4965619bb1549489c31a0a0a568fb0
 vali_split=0.3
 
 host = platform.node()  #cilegann-PC / ican-1080ti
