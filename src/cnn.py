@@ -44,8 +44,14 @@ gpu='single'
 model_to_load=''
 if(mode=='predict' or mode=='cam'):
     model_to_load=os.sys.argv[2]
-if(gpu=='single'):
+if(host=='ican-1080ti'):
     os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth=True
+    session = tf.Session(config=config)
+    KTF.set_session(session)
+    batch_size=32
+elif(host=='cilegann-PC'):
     config = tf.ConfigProto()
     config.gpu_options.allow_growth=True
     session = tf.Session(config=config)
