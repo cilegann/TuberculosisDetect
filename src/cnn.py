@@ -11,7 +11,7 @@ from keras import utils as np_utils
 from keras import Sequential
 from keras.models import load_model
 from keras.utils import multi_gpu_model
-from keras.layers import Activation,Dense,Dropout,MaxPooling2D,Flatten,Conv2D
+from keras.layers import Activation,Dense,Dropout,MaxPooling2D,Flatten,Conv2D,GlobalMaxPooling2D,GlobalAveragePooling2D
 from keras.optimizers import rmsprop,adam
 import keras.losses
 from keras.layers.normalization import BatchNormalization
@@ -61,16 +61,16 @@ if (host=='cilegann-PC'):
     polluted_train_basedir='./original_data/categ/polluted'
     positive_train_basedir='./original_data/categ/positive'
     negative_train_basedir='./original_data/categ/negative'
-    polluted_vali_basedir='./data/x'
-    positive_vali_basedir='./data/p'
-    negative_vali_basedir='./data/n'
+    polluted_vali_basedir='./data/polluted'
+    positive_vali_basedir='./data/positive'
+    negative_vali_basedir='./data/negative'
 if (host=='ican-1080ti'):
     polluted_train_basedir='./data/polluted'
     positive_train_basedir='./data/positive'
     negative_train_basedir='./data/negative'
-    polluted_vali_basedir='./data/vali/x'
-    positive_vali_basedir='./data/vali/p'
-    negative_vali_basedir='./data/vali/n'
+    polluted_vali_basedir='./data/vali/polluted'
+    positive_vali_basedir='./data/vali/positive'
+    negative_vali_basedir='./data/vali/negative'
 
 if(host=='cilegann-PC' or gpu=='single'):
     batch_size=32
@@ -104,9 +104,10 @@ def create_x_y_mapping(train_or_vali):
         for i,b in enumerate(basedir_list):
             for root, directs,filenames in os.walk(b):
                 for filename in filenames:
-                    pathName=os.path.join(root,filename)
-                    if( ('jpg' in pathName) or ('png' in pathName) ):
-                        f.write(pathName+','+str(i)+'\n')
+                    if 'txt' not in filename:
+                        pathName=os.path.join(root,filename)
+                        if( ('jpg' in pathName) or ('png' in pathName) ):
+                            f.write(pathName+','+str(i)+'\n')
 
 ###################################################################################
 
@@ -219,16 +220,16 @@ def get_model():
     model.add(Conv2D(64,(3,3),strides=(1,1)))
     model.add(Activation('relu'))
     model.add(BatchNormalization())
-    model.add(MaxPooling2D(2,2))
+    #model.add(MaxPooling2D(2,2))
+    model.add(GlobalAveragePooling2D())
+    #model.add(Flatten())
+    #model.add(Dropout(0.3))
 
-    model.add(Flatten())
-    model.add(Dropout(0.3))
-
-    model.add(Dense(1024))
+    model.add(Dense(32))
     model.add(Activation('relu'))
     model.add(BatchNormalization())
 
-    model.add(Dense(1024))
+    model.add(Dense(32))
     model.add(Activation('relu'))
     model.add(BatchNormalization())
 
@@ -275,8 +276,11 @@ def predict():
         for i,p in enumerate(vali_x_file_list):
             file.write(p+","+str(np.argmax(vali_y[i]))+","+str(np.argmax(prob_y[i]))+'\n')
             print(str(i)+" "+ str(np.argmax(vali_y[i])) +" -> "+str(np.argmax(prob_y[i])))
-            y_true=np.argmax(vali_y,axis=1)
-            y_pred=np.argmax(prob_y,axis=1)
+    y_true=np.argmax(vali_y,axis=1)
+    y_pred=np.argmax(prob_y,axis=1)
+    labels=["negative", "positive", "polluted"]
+    plot_confusion_matrix(y_true,y_pred,classes=labels)
+        
     return y_true,y_pred
 
         
@@ -297,8 +301,7 @@ def main():
         predict()
     elif(mode=='predict'):
         y_true,y_pred=predict()
-        labels=["Negative","Positive","Polluted"]
-        plot_confusion_matrix(y_true,y_pred,classes=labels,title='Confusion matrix')
+
     elif(mode=='cam'):
         model=load_model(model_to_load)
         #TODO load imgs
