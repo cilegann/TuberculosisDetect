@@ -50,7 +50,7 @@ if(host=='ican-1080ti'):
     config.gpu_options.allow_growth=True
     session = tf.Session(config=config)
     KTF.set_session(session)
-    batch_size=32
+    batch_size=64
 elif(host=='cilegann-PC'):
     config = tf.ConfigProto()
     config.gpu_options.allow_growth=True
@@ -207,18 +207,18 @@ def get_model():
 
     model.add(Conv2D(32,(2,2),strides=(1,1),input_shape=(height,width,3),data_format='channels_last'))
     model.add(Activation('relu'))
-    # model.add(BatchNormalization())
-    model.add(Conv2D(32,(3,3),strides=(1,1)))
+    model.add(BatchNormalization())
+    model.add(Conv2D(32,(2,2),strides=(1,1)))
     model.add(Activation('relu'))
-    # model.add(BatchNormalization())
+    model.add(BatchNormalization())
     model.add(MaxPooling2D(2,2))
 
     model.add(Conv2D(64,(2,2),strides=(1,1)))
     model.add(Activation('relu'))
-    # model.add(BatchNormalization())
-    model.add(Conv2D(64,(3,3),strides=(1,1)))
+    model.add(BatchNormalization())
+    model.add(Conv2D(64,(2,2),strides=(1,1)))
     model.add(Activation('relu'))
-    # model.add(BatchNormalization())
+    model.add(BatchNormalization())
     model.add(MaxPooling2D(2,2))
 
     model.add(Flatten())
@@ -326,7 +326,6 @@ def main():
 
     elif(mode=='cam'):
         model=load_model(model_to_load)
-        #TODO load imgs
         imgs=[]
         y_true,y_pred=predict()
         for i,img in enumerate(imgs):
