@@ -33,8 +33,8 @@ positive_weigt=15.
 polluted_weight=4.5
 negative_weight=1.4
 height=131
-width=315 #2.1
-epoch=150 #1
+width=420 #2.1
+epoch=200 #1
 vali_split=0.3
 
 host = platform.node()  #cilegann-PC / ican-1080ti
@@ -61,14 +61,6 @@ elif(host=='cilegann-PC'):
 train_mapping_file='./data/CNN_x_y_mapping.csv'
 vali_mapping_file='./data/CNN_vali_x_y_mapping.csv'
 
-# if (host=='cilegann-PC'):
-#     polluted_train_basedir='./original_data/categ/polluted'
-#     positive_train_basedir='./original_data/categ/positive'
-#     negative_train_basedir='./original_data/categ/negative'
-#     polluted_vali_basedir='./data/polluted'
-#     positive_vali_basedir='./data/positive'
-#     negative_vali_basedir='./data/negative'
-# if (host=='ican-1080ti'):
 polluted_train_basedir='./data/polluted'
 positive_train_basedir='./data/positive'
 negative_train_basedir='./data/negative'
@@ -221,17 +213,30 @@ def get_model():
     model.add(BatchNormalization())
     model.add(MaxPooling2D(2,2))
 
+    model.add(Conv2D(64,(2,2),strides=(1,1)))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+    model.add(Conv2D(64,(2,2),strides=(1,1)))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+    model.add(MaxPooling2D(2,2))
+
     model.add(Flatten())
-    model.add(Dropout(0.3))
+
+    model.add(Dense(64))
+    model.add(Dropout(0.4))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
 
     model.add(Dense(32))
+    model.add(Dropout(0.3))
     model.add(Activation('relu'))
     model.add(BatchNormalization())
 
     model.add(Dense(16))
+    model.add(Dropout(0.2))
     model.add(Activation('relu'))
     model.add(BatchNormalization())
-    model.add(Dropout(0.3))
 
     model.add(Dense(3))
     model.add(Activation('softmax'))

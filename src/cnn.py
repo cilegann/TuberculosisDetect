@@ -61,14 +61,6 @@ elif(host=='cilegann-PC'):
 train_mapping_file='./data/CNN_x_y_mapping.csv'
 vali_mapping_file='./data/CNN_vali_x_y_mapping.csv'
 
-# if (host=='cilegann-PC'):
-#     polluted_train_basedir='./original_data/categ/polluted'
-#     positive_train_basedir='./original_data/categ/positive'
-#     negative_train_basedir='./original_data/categ/negative'
-#     polluted_vali_basedir='./data/polluted'
-#     positive_vali_basedir='./data/positive'
-#     negative_vali_basedir='./data/negative'
-# if (host=='ican-1080ti'):
 polluted_train_basedir='./data/polluted'
 positive_train_basedir='./data/positive'
 negative_train_basedir='./data/negative'
