@@ -15,7 +15,7 @@ from keras.layers import Activation,Dense,Dropout,MaxPooling2D,Flatten,Conv2D,Gl
 from keras.optimizers import rmsprop,adam
 import keras.losses
 from keras.layers.normalization import BatchNormalization
-from keras.callbacks import EarlyStopping,ReduceLROnPlateau,ModelCheckpoint
+from keras.callbacks import EarlyStopping,ReduceLROnPlateau,ModelCheckpoint,TensorBoard
 from keras.preprocessing.image import ImageDataGenerator
 import keras.backend.tensorflow_backend as KTF
 
@@ -228,13 +228,28 @@ def get_model():
     model.add(Activation('relu'))
     model.add(BatchNormalization())
 
+    model.add(Dense(64))
+    model.add(Dropout(0.4))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+
     model.add(Dense(32))
     model.add(Dropout(0.3))
     model.add(Activation('relu'))
     model.add(BatchNormalization())
 
     model.add(Dense(16))
-    model.add(Dropout(0.2))
+    model.add(Dropout(0.3))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+
+    model.add(Dense(8))
+    model.add(Dropout(0.3))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+
+    model.add(Dense(4))
+    model.add(Dropout(0.3))
     model.add(Activation('relu'))
     model.add(BatchNormalization())
 
@@ -250,11 +265,13 @@ def training(model):
     es=EarlyStopping(monitor='val_loss', patience=10, verbose=0, mode='auto')
     #rlr=ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=10, verbose=0, mode='auto', epsilon=0.0001, cooldown=0, min_lr=0)
     mck=ModelCheckpoint(filepath='cnn_model_best.h5',monitor='val_loss',save_best_only=True)
+    tb = keras.callbacks.TensorBoard(log_dir='./Graph', histogram_freq=0, write_graph=True, write_images=True)
+
     if(host=='ican-1080ti' and gpu == 'both'):
         model = multi_gpu_model(model, gpus=2)
     class_weight = {0: negative_weight,1: positive_weigt,2: polluted_weight}
     model.compile(loss='categorical_crossentropy',optimizer='adam',metrics=['accuracy'])
-    model.fit_generator(data_generator(True),validation_data=(vali_x,vali_y),validation_steps=1,steps_per_epoch=len(train_x_file_list)//batch_size, epochs=epoch,callbacks=[mck,es],class_weight=class_weight)
+    model.fit_generator(data_generator(True),validation_data=(vali_x,vali_y),validation_steps=1,steps_per_epoch=len(train_x_file_list)//batch_size, epochs=epoch,callbacks=[mck,es,tb],class_weight=class_weight)
     model.save('cnn_model.h5')
 
 ###################################################################################
@@ -312,18 +329,14 @@ def get_model_memory_usage(batch_size, model):
     return gbytes
 
 def main():
-    model=get_model()
-    print(get_model_memory_usage(32,model))
+    
     if(mode=='train'):
         read_x_y_mapping('train',True)
         read_x_y_mapping('vali',False)
         load_all_valid()
         print(np.shape(vali_x))
-        if(host=='ican-1080ti' and gpu =='both'):
-            with tf.device('/cpu:0'):
-                model=get_model()
-        else:
-            model=get_model()
+        model=get_model()
+        print(get_model_memory_usage(batch_size,model))
         training(model)
         predict()
     elif(mode=='predict'):
