@@ -4,6 +4,7 @@ import tensorflow as tf
 import os
 import random
 import math
+import time
 
 import keras
 import keras.backend as K
@@ -12,7 +13,7 @@ from keras import Sequential
 from keras.models import load_model
 from keras.utils import multi_gpu_model
 from keras.layers import Activation,Dense,Dropout,MaxPooling2D,Flatten,Conv2D,GlobalMaxPooling2D,GlobalAveragePooling2D
-from keras.optimizers import rmsprop,adam
+from keras.optimizers import rmsprop,adam,SGD
 import keras.losses
 from keras.layers.normalization import BatchNormalization
 from keras.callbacks import EarlyStopping,ReduceLROnPlateau,ModelCheckpoint,TensorBoard
@@ -32,6 +33,10 @@ from evaluate_tools import cam,plot_confusion_matrix
 positive_weigt=15.
 polluted_weight=4.5
 negative_weight=1.4
+# if 'balance' in os.sys.argv:
+#     positive_weigt=1
+#     polluted_weight=1
+#     negative_weight=1
 height=131
 width=420 #2.1
 epoch=200 #1
@@ -51,12 +56,16 @@ if(host=='ican-1080ti'):
     session = tf.Session(config=config)
     KTF.set_session(session)
     batch_size=64
+    if('balance' in os.sys.argv):
+        batch_size=63
 elif(host=='cilegann-PC'):
     config = tf.ConfigProto()
     config.gpu_options.allow_growth=True
     session = tf.Session(config=config)
     KTF.set_session(session)
     batch_size=32
+    if('balance' in os.sys.argv):
+        batch_size=30
 
 train_mapping_file='./data/CNN_x_y_mapping.csv'
 vali_mapping_file='./data/CNN_vali_x_y_mapping.csv'
@@ -74,11 +83,17 @@ vali_index = 0
 train_x_file_list = []
 train_x = []
 train_y = []
+train_start_index=[-1,-1,-1]
+train_end_index=[-1,-1,-1]
+train_len=[-1,-1,-1]
 
 vali_x_file_list = []
 vali_x=[]
 vali_y = []
 prob_y=[]
+vali_start_index=[-1,-1,-1]
+vali_end_index=[-1,-1,-1]
+vali_len=[-1,-1,-1]
 
 ###################################################################################
 
@@ -106,12 +121,18 @@ def read_x_y_mapping(train_or_vali,shuffle):
     if(train_or_vali=='train'):
         global train_x_file_list
         global train_y
+        global train_start_index
+        global train_end_index
+        global train_len
         file_list=[]
         y=[]
         mapping_file=train_mapping_file
     else:
         global vali_x_file_list
         global vali_y
+        global vali_start_index
+        global vali_end_index
+        global vali_len
         file_list=[]
         y=[]
         mapping_file=vali_mapping_file
@@ -127,12 +148,30 @@ def read_x_y_mapping(train_or_vali,shuffle):
         c=list(zip(file_list,y))
         random.shuffle(c)
         file_list,y=zip(*c)
+    else:
+        s0=y.index('0')
+        s1=y.index('1')
+        s2=y.index('2')
+        e0=s1-1
+        e1=s2-1
+        e2=len(y)-1
+        l0=e0-s0+1
+        l1=e1-s1+1
+        l2=e2-s2+1
     if(train_or_vali=='train'):
         train_x_file_list=file_list
         train_y=np_utils.to_categorical(np.array(y),3)
+        if not shuffle:
+            train_start_index=[s0,s1,s2]
+            train_end_index=[e0,e1,e2]
+            train_len=[l0,l1,l2]
     else:
         vali_x_file_list=file_list
         vali_y=np_utils.to_categorical(np.array(y),3)
+        if not shuffle:
+            vali_start_index=[s0,s1,s2]
+            vali_end_index=[e0,e1,e2]
+            vali_len=[l0,l1,l2]
 
 ###################################################################################
 
@@ -192,64 +231,96 @@ def data_generator(is_training):
 
         yield output, label_list
 
+
+###################################################################################
+
+def data_generator_balance(is_training):
+    if is_training:
+        s=train_start_index[:]
+        e=train_end_index[:]
+        l=train_len[:]
+    else:
+        s=vali_start_index[:]
+        e=vali_end_index[:]
+        l=vali_len[:]
+    flag=[0,0,0]
+    while(1):
+        file_list=[]
+        label_list=[]
+        for b in range(int(batch_size/3)):
+            for i in range(3):
+                index=flag[i]+s[i]
+                if is_training:
+                    file_list.append(train_x_file_list[index])
+                    label_list.append(train_y[index])
+                else:
+                    file_list.append(vali_x_file_list[index])
+                    label_list.append(vali_y[index])
+                flag[i]+=1
+                if(flag[i]>=l[i]):
+                    flag[i]=0
+
+        # c=list(zip(file_list,label_list))
+        # random.shuffle(c)
+        # file_list,label_list=zip(*c)
+        label_list=np.asarray(label_list)
+        output = np.zeros([batch_size, height,width, 3])
+        for i in range(batch_size):
+            output[i]=resize_preprocessing(Image.open(file_list[i]),label_list[i])
+        yield(output,label_list)
+
 ###################################################################################
 
 def get_model():
     model = Sequential()
 
-    model.add(Conv2D(32,(2,2),strides=(1,1),input_shape=(height,width,3),data_format='channels_last'))
+    model.add(Conv2D(256,(3,3),strides=(1,1),input_shape=(height,width,3),data_format='channels_last'))
     model.add(Activation('relu'))
     model.add(BatchNormalization())
-    model.add(Conv2D(32,(2,2),strides=(1,1)))
-    model.add(Activation('relu'))
-    model.add(BatchNormalization())
-    model.add(MaxPooling2D(2,2))
-
-    model.add(Conv2D(64,(2,2),strides=(1,1)))
-    model.add(Activation('relu'))
-    model.add(BatchNormalization())
-    model.add(Conv2D(64,(2,2),strides=(1,1)))
+    model.add(Conv2D(256,(3,3),strides=(1,1)))
     model.add(Activation('relu'))
     model.add(BatchNormalization())
     model.add(MaxPooling2D(2,2))
 
-    model.add(Conv2D(64,(2,2),strides=(1,1)))
+    model.add(Conv2D(512,(3,3),strides=(1,1)))
     model.add(Activation('relu'))
     model.add(BatchNormalization())
-    model.add(Conv2D(64,(2,2),strides=(1,1)))
+    model.add(Conv2D(512,(3,3),strides=(1,1)))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+    model.add(MaxPooling2D(2,2))
+
+    model.add(Conv2D(1024,(3,3),strides=(1,1)))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+    model.add(Conv2D(1024,(3,3),strides=(1,1)))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+    model.add(Conv2D(1024,(3,3),strides=(1,1)))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+    model.add(MaxPooling2D(2,2))
+
+    model.add(Conv2D(1024,(3,3),strides=(1,1)))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+    model.add(Conv2D(1024,(3,3),strides=(1,1)))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+    model.add(Conv2D(1024,(3,3),strides=(1,1)))
     model.add(Activation('relu'))
     model.add(BatchNormalization())
     model.add(MaxPooling2D(2,2))
 
     model.add(Flatten())
 
-    model.add(Dense(64))
-    model.add(Dropout(0.4))
+    model.add(Dense(1024))
     model.add(Activation('relu'))
+    model.add(Dropout(0.5))
     model.add(BatchNormalization())
 
-    model.add(Dense(64))
-    model.add(Dropout(0.4))
-    model.add(Activation('relu'))
-    model.add(BatchNormalization())
-
-    model.add(Dense(32))
-    model.add(Dropout(0.3))
-    model.add(Activation('relu'))
-    model.add(BatchNormalization())
-
-    model.add(Dense(16))
-    model.add(Dropout(0.3))
-    model.add(Activation('relu'))
-    model.add(BatchNormalization())
-
-    model.add(Dense(8))
-    model.add(Dropout(0.3))
-    model.add(Activation('relu'))
-    model.add(BatchNormalization())
-
-    model.add(Dense(4))
-    model.add(Dropout(0.3))
+    model.add(Dense(1024))
+    model.add(Dropout(0.5))
     model.add(Activation('relu'))
     model.add(BatchNormalization())
 
@@ -270,8 +341,9 @@ def training(model):
     if(host=='ican-1080ti' and gpu == 'both'):
         model = multi_gpu_model(model, gpus=2)
     class_weight = {0: negative_weight,1: positive_weigt,2: polluted_weight}
-    model.compile(loss='categorical_crossentropy',optimizer='adam',metrics=['accuracy'])
-    model.fit_generator(data_generator(True),validation_data=(vali_x,vali_y),validation_steps=1,steps_per_epoch=len(train_x_file_list)//batch_size, epochs=epoch,callbacks=[mck,es,tb],class_weight=class_weight)
+    sgd = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
+    model.compile(loss='categorical_crossentropy',optimizer='sgd',metrics=['acc'])
+    model.fit_generator(data_generator(True) if 'balance' not in os.sys.argv else data_generator_balance(True),validation_data=(vali_x,vali_y),validation_steps=1,steps_per_epoch=len(train_x_file_list)//batch_size, epochs=epoch,callbacks=[mck,es,tb],class_weight=class_weight)
     model.save('cnn_model.h5')
 
 ###################################################################################
@@ -331,7 +403,10 @@ def get_model_memory_usage(batch_size, model):
 def main():
     
     if(mode=='train'):
-        read_x_y_mapping('train',True)
+        if 'balance' in os.sys.argv:
+            read_x_y_mapping('train',False)
+        else:
+            read_x_y_mapping('train',True)
         read_x_y_mapping('vali',False)
         load_all_valid()
         print(np.shape(vali_x))
@@ -348,6 +423,13 @@ def main():
         y_true,y_pred=predict()
         for i,img in enumerate(imgs):
             cam(str(i)+'_'+y_pred[i],img,y_pred[i],model)
+    else:
+        read_x_y_mapping('train',False)
+        
+        print(train_start_index)
+        print(train_end_index)
+        print(train_len)
+        data_generator_balance(True)
 if __name__ == "__main__":
     main()
 

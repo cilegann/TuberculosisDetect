@@ -53,20 +53,20 @@ if(gpu=='single'):
 train_mapping_file='./data/CNN_x_y_mapping.csv'
 vali_mapping_file='./data/CNN_vali_x_y_mapping.csv'
 
-if (host=='cilegann-PC'):
-    polluted_train_basedir='./original_data/categ/polluted'
-    positive_train_basedir='./original_data/categ/positive'
-    negative_train_basedir='./original_data/categ/negative'
-    polluted_vali_basedir='./data/x'
-    positive_vali_basedir='./data/p'
-    negative_vali_basedir='./data/n'
-if (host=='ican-1080ti'):
-    polluted_train_basedir='./data/polluted'
-    positive_train_basedir='./data/positive'
-    negative_train_basedir='./data/negative'
-    polluted_vali_basedir='./data/vali/x'
-    positive_vali_basedir='./data/vali/p'
-    negative_vali_basedir='./data/vali/n'
+# if (host=='cilegann-PC'):
+#     polluted_train_basedir='./original_data/categ/polluted'
+#     positive_train_basedir='./original_data/categ/positive'
+#     negative_train_basedir='./original_data/categ/negative'
+#     polluted_vali_basedir='./data/x'
+#     positive_vali_basedir='./data/p'
+#     negative_vali_basedir='./data/n'
+# if (host=='ican-1080ti'):
+polluted_train_basedir='./data/polluted'
+positive_train_basedir='./data/positive'
+negative_train_basedir='./data/negative'
+polluted_vali_basedir='./data/vali/polluted'
+positive_vali_basedir='./data/vali/positive'
+negative_vali_basedir='./data/vali/negative'
 
 if(host=='cilegann-PC' or gpu=='single'):
     batch_size=32
