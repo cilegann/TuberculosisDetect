@@ -3,6 +3,7 @@
 *.h5
 *.PNG
 *.png
+*.psd
 cnn_model/
 data/
 saliency_map/

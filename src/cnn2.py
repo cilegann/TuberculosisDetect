@@ -13,7 +13,7 @@ from keras import Sequential
 from keras.models import load_model
 from keras.utils import multi_gpu_model
 from keras.layers import Activation,Dense,Dropout,MaxPooling2D,Flatten,Conv2D,GlobalMaxPooling2D,GlobalAveragePooling2D
-from keras.optimizers import rmsprop,adam,SGD
+from keras.optimizers import rmsprop,adam,SGD,Adadelta
 import keras.losses
 from keras.layers.normalization import BatchNormalization
 from keras.callbacks import EarlyStopping,ReduceLROnPlateau,ModelCheckpoint,TensorBoard
@@ -33,13 +33,13 @@ from evaluate_tools import cam,plot_confusion_matrix
 positive_weigt=15.
 polluted_weight=4.5
 negative_weight=1.4
-# if 'balance' in os.sys.argv:
-#     positive_weigt=1
-#     polluted_weight=1
-#     negative_weight=1
+if 'balance' in os.sys.argv:
+    positive_weigt=1
+    polluted_weight=1
+    negative_weight=1
 height=131
-width=420 #2.1
-epoch=200 #1
+width=420 
+epoch=200 
 vali_split=0.3
 
 host = platform.node()  #cilegann-PC / ican-1080ti
@@ -274,7 +274,26 @@ def data_generator_balance(is_training):
 def get_model():
     model = Sequential()
 
-    model.add(Conv2D(256,(3,3),strides=(1,1),input_shape=(height,width,3),data_format='channels_last'))
+    model.add(Conv2D(64,(3,3),strides=(1,1),input_shape=(height,width,3),data_format='channels_last'))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+    model.add(Conv2D(64,(3,3),strides=(1,1)))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+    model.add(MaxPooling2D(2,2))
+
+    model.add(Conv2D(128,(3,3),strides=(1,1)))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+    model.add(Conv2D(128,(3,3),strides=(1,1)))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+    model.add(MaxPooling2D(2,2))
+
+    model.add(Conv2D(256,(3,3),strides=(1,1)))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+    model.add(Conv2D(256,(3,3),strides=(1,1)))
     model.add(Activation('relu'))
     model.add(BatchNormalization())
     model.add(Conv2D(256,(3,3),strides=(1,1)))
@@ -282,45 +301,26 @@ def get_model():
     model.add(BatchNormalization())
     model.add(MaxPooling2D(2,2))
 
-    model.add(Conv2D(512,(3,3),strides=(1,1)))
-    model.add(Activation('relu'))
-    model.add(BatchNormalization())
-    model.add(Conv2D(512,(3,3),strides=(1,1)))
-    model.add(Activation('relu'))
-    model.add(BatchNormalization())
-    model.add(MaxPooling2D(2,2))
-
-    model.add(Conv2D(1024,(3,3),strides=(1,1)))
-    model.add(Activation('relu'))
-    model.add(BatchNormalization())
-    model.add(Conv2D(1024,(3,3),strides=(1,1)))
-    model.add(Activation('relu'))
-    model.add(BatchNormalization())
-    model.add(Conv2D(1024,(3,3),strides=(1,1)))
-    model.add(Activation('relu'))
-    model.add(BatchNormalization())
-    model.add(MaxPooling2D(2,2))
-
-    model.add(Conv2D(1024,(3,3),strides=(1,1)))
-    model.add(Activation('relu'))
-    model.add(BatchNormalization())
-    model.add(Conv2D(1024,(3,3),strides=(1,1)))
-    model.add(Activation('relu'))
-    model.add(BatchNormalization())
-    model.add(Conv2D(1024,(3,3),strides=(1,1)))
-    model.add(Activation('relu'))
-    model.add(BatchNormalization())
-    model.add(MaxPooling2D(2,2))
+    # model.add(Conv2D(1024,(3,3),strides=(1,1)))
+    # model.add(Activation('relu'))
+    # model.add(BatchNormalization())
+    # model.add(Conv2D(1024,(3,3),strides=(1,1)))
+    # model.add(Activation('relu'))
+    # model.add(BatchNormalization())
+    # model.add(Conv2D(1024,(3,3),strides=(1,1)))
+    # model.add(Activation('relu'))
+    # model.add(BatchNormalization())
+    # model.add(MaxPooling2D(2,2))
 
     model.add(Flatten())
 
-    model.add(Dense(1024))
+    model.add(Dense(256))
     model.add(Activation('relu'))
-    model.add(Dropout(0.5))
+    model.add(Dropout(0.3))
     model.add(BatchNormalization())
 
-    model.add(Dense(1024))
-    model.add(Dropout(0.5))
+    model.add(Dense(256))
+    model.add(Dropout(0.3))
     model.add(Activation('relu'))
     model.add(BatchNormalization())
 
@@ -342,7 +342,8 @@ def training(model):
         model = multi_gpu_model(model, gpus=2)
     class_weight = {0: negative_weight,1: positive_weigt,2: polluted_weight}
     sgd = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
-    model.compile(loss='categorical_crossentropy',optimizer='sgd',metrics=['acc'])
+    adadelta=Adadelta()
+    model.compile(loss='categorical_crossentropy',optimizer=adadelta,metrics=['acc'])
     model.fit_generator(data_generator(True) if 'balance' not in os.sys.argv else data_generator_balance(True),validation_data=(vali_x,vali_y),validation_steps=1,steps_per_epoch=len(train_x_file_list)//batch_size, epochs=epoch,callbacks=[mck,es,tb],class_weight=class_weight)
     model.save('cnn_model.h5')
 
