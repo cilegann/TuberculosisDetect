@@ -231,10 +231,13 @@ def data_generator(is_training):
 
         yield output, label_list
 
-
+train_flag=[0,0,0]
+vali_flag=[0,0,0]
 ###################################################################################
 
 def data_generator_balance(is_training):
+    global train_flag
+    global vali_flag
     if is_training:
         s=train_start_index[:]
         e=train_end_index[:]
@@ -249,16 +252,19 @@ def data_generator_balance(is_training):
         label_list=[]
         for b in range(int(batch_size/3)):
             for i in range(3):
-                index=flag[i]+s[i]
+                index=(train_flag[i] if is_training else vali_flag[i])+s[i]
                 if is_training:
                     file_list.append(train_x_file_list[index])
                     label_list.append(train_y[index])
+                    train_flag[i]+=1
+                    if(train_flag[i]>=l[i]):
+                        train_flag[i]=0
                 else:
                     file_list.append(vali_x_file_list[index])
                     label_list.append(vali_y[index])
-                flag[i]+=1
-                if(flag[i]>=l[i]):
-                    flag[i]=0
+                    vali_flag[i]+=1
+                    if(vali_flag[i]>=l[i]):
+                        vali_flag[i]=0
 
         # c=list(zip(file_list,label_list))
         # random.shuffle(c)
@@ -344,7 +350,7 @@ def training(model):
     sgd = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
     adadelta=Adadelta()
     model.compile(loss='categorical_crossentropy',optimizer=adadelta,metrics=['acc'])
-    model.fit_generator(data_generator(True) if 'balance' not in os.sys.argv else data_generator_balance(True),validation_data=(vali_x,vali_y),validation_steps=1,steps_per_epoch=len(train_x_file_list)//batch_size, epochs=epoch,callbacks=[mck,es,tb],class_weight=class_weight)
+    model.fit_generator(data_generator(True) if 'balance' not in os.sys.argv else data_generator_balance(True),validation_data=(vali_x,vali_y),validation_steps=1,steps_per_epoch=len(train_x_file_list)//batch_size if 'balance' not in os.sys.argv else min(train_len)//batch_size, epochs=epoch,callbacks=[mck,es,tb],class_weight=class_weight)
     model.save('cnn_model.h5')
 
 ###################################################################################
