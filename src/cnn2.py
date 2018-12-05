@@ -302,9 +302,6 @@ def get_model():
     model.add(Conv2D(256,(3,3),strides=(1,1)))
     model.add(Activation('relu'))
     model.add(BatchNormalization())
-    model.add(Conv2D(256,(3,3),strides=(1,1)))
-    model.add(Activation('relu'))
-    model.add(BatchNormalization())
     model.add(MaxPooling2D(2,2))
 
     # model.add(Conv2D(1024,(3,3),strides=(1,1)))
@@ -379,7 +376,7 @@ def predict():
             print(str(i)+" "+ str(np.argmax(vali_y[i])) +" -> "+str(np.argmax(prob_y[i])))
     y_true=np.argmax(vali_y,axis=1)
     y_pred=np.argmax(prob_y,axis=1)
-    labels=["negative", "positive", "polluted"]
+    labels=["陰性", "陽性", "污染"]
     plot_confusion_matrix(y_true,y_pred,classes=labels)
         
     return y_true,y_pred

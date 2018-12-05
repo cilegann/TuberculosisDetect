@@ -12,7 +12,7 @@ from keras import utils as np_utils
 from keras import Sequential
 from keras.models import load_model
 from keras.utils import multi_gpu_model
-from keras.layers import Activation,Dense,Dropout,Flatten,LeakyReLU
+from keras.layers import Activation,Dense,Dropout,Flatten
 from keras.optimizers import rmsprop,adam,SGD,Adadelta
 import keras.losses
 from keras.layers.normalization import BatchNormalization
@@ -25,7 +25,7 @@ from PIL import Image
 import cv2
 import platform
 
-from evaluate_tools import cam,plot_confusion_matrix,evaluate
+from evaluate_tools import cam,plot_confusion_matrix
 #train : python3 scriptname train
 #predict: python3 scriptname predict [modelname]
 #saliencymap: python3 scriptname cam [modelname] [dataset] [portion] [amount] [save/show]
@@ -286,10 +286,10 @@ def data_generator_balance(is_training):
 def get_model():
     model = Sequential()
     model.add(BatchNormalization(input_shape=(vector_length,)))
-    model.add(Dense(units=1024 ,kernel_initializer='random_uniform',activation='elu'))
+    model.add(Dense(units=1024 ,kernel_initializer='random_uniform',activation='tanh'))
     model.add(BatchNormalization())
     model.add(Dropout(0.5))
-    model.add(Dense(units=1024,kernel_initializer='random_uniform',activation='elu'))
+    model.add(Dense(units=1024,kernel_initializer='random_uniform',activation='tanh'))
     model.add(BatchNormalization())
     model.add(Dropout(0.5))
     model.add(Dense(units=3,activation='softmax'))
@@ -299,10 +299,10 @@ def get_model():
 ###################################################################################
 
 def training(model):
-    es=EarlyStopping(monitor='val_loss', patience=20, verbose=0, mode='auto')
+    es=EarlyStopping(monitor='val_loss', patience=10, verbose=0, mode='auto')
     #rlr=ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=10, verbose=0, mode='auto', epsilon=0.0001, cooldown=0, min_lr=0)
     mck=ModelCheckpoint(filepath='yolo9000_model_best.h5',monitor='val_loss',save_best_only=True)
-    tb = keras.callbacks.TensorBoard(log_dir='./Graph', histogram_freq=1, write_graph=True, write_images=True)
+    tb = keras.callbacks.TensorBoard(log_dir='./Graph', histogram_freq=0, write_graph=True, write_images=True)
 
     class_weight = {0: negative_weight,1: positive_weigt,2: polluted_weight}
 
@@ -337,9 +337,9 @@ def predict():
             print(str(i)+" "+ str(np.argmax(vali_y[i])) +" -> "+str(np.argmax(prob_y[i])))
     y_true=np.argmax(vali_y,axis=1)
     y_pred=np.argmax(prob_y,axis=1)
-    labels=["Negative", "Positive", "Polluted"]
+    labels=["negative", "positive", "polluted"]
     plot_confusion_matrix(y_true,y_pred,classes=labels)
-    evaluate(y_true,y_pred)
+        
     return y_true,y_pred
 
         

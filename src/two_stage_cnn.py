@@ -464,7 +464,7 @@ def predict(form,best=True):
             result[i][2]=prob_y_0[i][0]*prob_y_1[i][0]
     y_true=np.argmax(vali_y,axis=1)
     y_pred=np.argmax(result,axis=1)
-    plot_confusion_matrix(y_true,y_pred,["Negative","Positive","Polluted"])
+    plot_confusion_matrix(y_true,y_pred,["陰性","陽性","污染"])
     with open('./two_stage_result_'+form+'.csv','w') as file:
         file.write('file,true,pred,0_0,0_1,1_0,1_1\n')
         for i in range(len(vali_x_file_list)):
