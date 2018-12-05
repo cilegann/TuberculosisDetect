@@ -337,6 +337,11 @@ def predict():
             print(str(i)+" "+ str(np.argmax(vali_y[i])) +" -> "+str(np.argmax(prob_y[i])))
     y_true=np.argmax(vali_y,axis=1)
     y_pred=np.argmax(prob_y,axis=1)
+    # for y in prob_y:
+    #     if y[1]>0.33:
+    #         y_pred.append(1)
+    #     else:
+    #         y_pred.append(np.argmax(y))
     labels=["Negative", "Positive", "Polluted"]
     plot_confusion_matrix(y_true,y_pred,classes=labels)
     evaluate(y_true,y_pred)
