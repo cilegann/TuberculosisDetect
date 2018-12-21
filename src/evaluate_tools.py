@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import precision_recall_fscore_support as score
 from texttable import Texttable
+import itertools
 
 def cam(filename,img,label,model,backprop_modifier='guided'):
     #shutil.rmtree("./cam/")
@@ -45,6 +46,9 @@ def plot_confusion_matrix(y_true,y_pred,classes,title='Confusion matrix',cmap=pl
     plt.tight_layout()
     plt.ylabel("Real")
     plt.xlabel("Predict")
+    for i, j in itertools.product(range(cmx.shape[0]), range(cmx.shape[1])):
+        plt.text(j, i, '{:.2f}'.format(cmx[i, j]), horizontalalignment="center",
+            color="white" if cmx[i, j] > 0.5 else "black")   
     plt.savefig('confusion_matrix.png')
 
 def evaluate(y_true,y_pred):
