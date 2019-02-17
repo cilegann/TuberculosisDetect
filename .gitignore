@@ -8,3 +8,4 @@ cnn_model/
 data/
 saliency_map/
 Graph/
+data_origin_distribution_version/
