@@ -15,6 +15,7 @@ import keras.losses
 from keras.layers.normalization import BatchNormalization
 from keras.callbacks import EarlyStopping,ReduceLROnPlateau,ModelCheckpoint
 from keras.preprocessing.image import ImageDataGenerator
+import keras.backend.tensorflow_backend as KTF
 import numpy as np
 from PIL import Image
 import random
@@ -23,7 +24,7 @@ import matplotlib.pyplot as plt
 import cv2
 import platform
 import shutil
-from evaluate_tools import cam,plot_confusion_matrix
+from evaluate_tools import cam,plot_confusion_matrix,evaluate
 #train : python3 scriptname train [single/both]
 #predict: python3 scriptname predict [modelname]
 #saliencymap: python3 scriptname saliencymap [modelname] [dataset] [portion] [amount] [save/show]
@@ -282,26 +283,15 @@ def predict():
         for i,p in enumerate(vali_x_file_list):
             file.write(p+","+str(np.argmax(vali_y[i]))+","+str(np.argmax(prob_y[i]))+'\n')
             print(str(i)+" "+ str(np.argmax(vali_y[i])) +" -> "+str(np.argmax(prob_y[i])))
-            
-            if( np.argmax(vali_y[i])==0 ):
-                y_true.append("negative")
-            elif( np.argmax(vali_y[i])==2 ):
-                y_true.append("positive")
-            else:
-                y_true.append("polluted")
-            
-            if( np.argmax(prob_y[i])==0 ):
-                y_pred.append("negative")
-            elif( np.argmax(prob_y[i])==2 ):
-                y_pred.append("positive")
-            else:
-                y_pred.append("polluted")
+    y_true=np.argmax(vali_y,axis=1)
+    y_pred=np.argmax(prob_y,axis=1)
+    evaluate(y_true,y_pred)
     labels=["negative", "positive", "polluted"]
-    plt.figure()
-    from sklearn.metrics import confusion_matrix
-    cm = confusion_matrix(y_true,y_pred)
-    plot_confusion_matrix(cm,classes=labels,title='Confusion matrix')
-    plt.show()
+    #plt.figure()
+    #from sklearn.metrics import confusion_matrix
+    #cm = confusion_matrix(y_true,y_pred)
+    #plot_confusion_matrix(cm,classes=labels,title='Confusion matrix')
+    #plt.show()
 
 def saliency_map(mode,backprop_modifier=None,grad_modifier="absolute"):
     shutil.rmtree("./saliency_map/")
