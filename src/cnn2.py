@@ -378,6 +378,7 @@ def predict():
     y_pred=np.argmax(prob_y,axis=1)
     labels=["陰性", "陽性", "污染"]
     plot_confusion_matrix(y_true,y_pred,classes=labels)
+    
         
     return y_true,y_pred
 
