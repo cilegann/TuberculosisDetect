@@ -135,5 +135,11 @@ def get_model():
 
 ###################################################################################
 
-def train(model):
-    pass
+def train():
+    model=get_model()
+    mode
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Capsule Network on TB.")
+    parser.add_argument('-train')
