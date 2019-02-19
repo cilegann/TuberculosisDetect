@@ -32,6 +32,7 @@ import scipy.ndimage as ndimage
 from evaluate_tools import plot_confusion_matrix,evaluate
 height=131
 width=420
+vector_length=173056
 epoch=200
 vali_split=0.3
 
@@ -43,24 +44,18 @@ else:
     gpu='single'
 
 if(gpu=='single'):
-    os.environ['CUDA_VISIBLE_DEVICES']='1'
+    os.environ['CUDA_VISIBLE_DEVICES']='0'
     config = tf.ConfigProto()
     config.gpu_options.allow_growth=True
     session = tf.Session(config=config)
     KTF.set_session(session)
-    batch_size=32
+    batch_size=64
 
-train_mapping_file='./data/CNN_x_y_mapping.csv'
-vali_mapping_file='./data/CNN_vali_x_y_mapping.csv'
+train_mapping_file='./data/YOLO9000_x_y_mapping.csv'
+vali_mapping_file='./data/YOLO9000_vali_x_y_mapping.csv'
 
-# if (host=='cilegann-PC'):
-#     polluted_train_basedir='./original_data/categ/polluted'
-#     positive_train_basedir='./original_data/categ/positive'
-#     negative_train_basedir='./original_data/categ/negative'
-#     polluted_vali_basedir='./data/x'
-#     positive_vali_basedir='./data/p'
-#     negative_vali_basedir='./data/n'
-# if (host=='ican-1080ti'):
+
+
 polluted_train_basedir='./data/polluted'
 positive_train_basedir='./data/positive'
 negative_train_basedir='./data/negative'
@@ -105,9 +100,10 @@ def create_x_y_mapping(train_or_vali):
         for i,b in enumerate(basedir_list):
             for root, directs,filenames in os.walk(b):
                 for filename in filenames:
-                    pathName=os.path.join(root,filename)
-                    if( ('jpg' in pathName) or ('png' in pathName) ):
-                        f.write(pathName+','+str(i)+'\n')
+                    if 'txt' in filename:
+                        pathName=os.path.join(root,filename)
+                        if( ('jpg' in pathName) or ('png' in pathName) ):
+                            f.write(pathName+','+str(i)+'\n')
 
 ###################################################################################
 
@@ -145,25 +141,43 @@ def read_x_y_mapping(train_or_vali,shuffle):
 
 ###################################################################################
 
+def parser(string):
+    fn=string.split(",")[0]
+    if "negative" in fn:
+        y=0
+    elif "positive" in fn:
+        y=1
+    elif "polluted" in fn:
+        y=2
+    vector=np.asarray( list(map(float,string.split(",")[1].split(" "))) )
+    label=np_utils.to_categorical(y,3)
+    return vector,label
+
+def vec_reader(path):
+    with open(path,'r') as f:
+        line=f.readline()
+    return parser(line)
+
+###################################################################################
+
 def load_all_valid(vali_x_file_list):
-    x = np.zeros([len(vali_x_file_list), height, width, 3])
+    global vali_x
+    vali_x = np.zeros([len(vali_x_file_list), 173056])
     for i,f in enumerate(vali_x_file_list):
-        x[i]=Image.open(f).resize([width,height])
-    x=x.astype('float64')
-    x/=255.
-    return x
+        vali_x[i],tmp= vec_reader(f)
     #TODO backup
 
 ###################################################################################
 
-def resize_preprocessing(data,label):
-    data=data.resize([width,height])
-    data = np.asarray(data)
-    data = data.astype('float64')
-    if (random.random() > 0.5 and int(label[1])==1):
-        data = cv2.flip(data, 1)
-    data/=255.
-    return data
+def generate_valid_from_train():
+    global train_x_file_list
+    global train_y
+    global vali_x_file_list
+    global vali_y
+    vali_x_file_list = train_x_file_list[ :math.ceil(len(train_x_file_list)*vali_split) ]
+    vali_y = train_y [ :math.ceil(len(train_x_file_list)*vali_split) ]
+    train_x_file_list = train_x_file_list [math.floor(len(train_x_file_list)*vali_split):]
+    train_y = train_y [math.floor(len(train_x_file_list)*vali_split):]
 
 ###################################################################################
 
@@ -184,9 +198,9 @@ def data_generator(is_training):
             label_list = vali_y[vali_index:vali_index + batch_size]
             vali_index += batch_size
 
-        output = np.zeros([batch_size, height,width, 3])
+        output = np.zeros([batch_size, vector_length])
         for i in range(batch_size):
-            output[i]=resize_preprocessing(Image.open(file_list[i]),label_list[i])
+            output[i],tmp=vec_reader(file_list[i])
 
         yield output, label_list
 
@@ -194,39 +208,17 @@ def data_generator(is_training):
 
 def get_model():
     model = Sequential()
-
-    model.add(Conv2D(32,(3,3),strides=(1,1),input_shape=(height,width,3),data_format='channels_last'))
-    model.add(Activation('relu'))
+    model.add(BatchNormalization(input_shape=(vector_length,)))
+    model.add(Dense(units=1024,kernel_initializer='random_uniform',activation='elu'))
     model.add(BatchNormalization())
-    model.add(Conv2D(32,(3,3),strides=(1,1)))
-    model.add(Activation('relu'))
+    model.add(Dropout(0.5))
+    model.add(Dense(units=1024,kernel_initializer='random_uniform',activation='elu'))
     model.add(BatchNormalization())
-    model.add(MaxPooling2D(2,2))
-
-    model.add(Conv2D(64,(3,3),strides=(1,1)))
-    model.add(Activation('relu'))
-    model.add(BatchNormalization())
-    model.add(Conv2D(64,(3,3),strides=(1,1)))
-    model.add(Activation('relu'))
-    model.add(BatchNormalization())
-    model.add(MaxPooling2D(2,2))
-
-    model.add(Flatten())
-    model.add(Dropout(0.3))
-
-    model.add(Dense(1024))
-    model.add(Activation('relu'))
-    model.add(BatchNormalization())
-
-    model.add(Dense(1024))
-    model.add(Activation('relu'))
-    model.add(BatchNormalization())
-
-    model.add(Dense(2))
-    model.add(Activation('softmax'))
-
+    model.add(Dropout(0.5))
+    model.add(Dense(units=2,activation='softmax'))
     model.summary()
     return model
+
 
 ###################################################################################
 
@@ -415,13 +407,13 @@ def training(stage):
         return
     model=get_model()
     es=EarlyStopping(monitor='val_loss', patience=10, verbose=0, mode='auto')
-    mck=ModelCheckpoint(filepath=(stage+'_cnn_model_best.h5'),monitor='val_loss',save_best_only=True)
+    mck=ModelCheckpoint(filepath=(stage+'_transferyolo_model_best.h5'),monitor='val_loss',save_best_only=True)
     if(host=='ican-1080ti' and gpu == 'both'):
         model = multi_gpu_model(model, gpus=2)
     class_weight = {0:1,1:num_of_0/num_of_1}
     model.compile(loss='categorical_crossentropy',optimizer='adam',metrics=['accuracy'])
     model.fit_generator(data_generator(True),validation_data=(vali_x,vali_y),validation_steps=1,steps_per_epoch=len(train_x_file_list)//batch_size, epochs=epoch,callbacks=[mck,es],class_weight=class_weight)
-    model.save(stage+'_cnn_model.h5')
+    model.save(stage+'_transferyolo_model.h5')
 ###################################################################################
 
 def predict(form,best=True):
@@ -429,11 +421,13 @@ def predict(form,best=True):
     global vali_x
     global vali_y
     if(best):  
-        model_0='./models/'+form+'_0_cnn_model_best.h5'
-        model_1='./models/'+form+'_1_cnn_model_best.h5'
+        #model_0='./models/'+form+'_0_transferyolo_model_best.h5'
+        #model_1='./models/'+form+'_1_transferyolo_model_best.h5'
+        model_0=form+'_0_transferyolo_model_best.h5'
+        model_1=form+'_1_transferyolo_model_best.h5'
     else:
-        model_0='./models/'+form+'_0_cnn_model.h5'
-        model_1='./models/'+form+'_1_cnn_model.h5'
+        model_0='./models/'+form+'_0_transferyolo_model.h5'
+        model_1='./models/'+form+'_1_transferyolo_model.h5'
     print("=== Predict based on "+model_0+' and '+model_1+' ===')
     print("Loading "+model_0)
     model=load_model(model_0)
@@ -464,9 +458,9 @@ def predict(form,best=True):
             result[i][2]=prob_y_0[i][0]*prob_y_1[i][0]
     y_true=np.argmax(vali_y,axis=1)
     y_pred=np.argmax(result,axis=1)
-    plot_confusion_matrix(y_true,y_pred,["negative","positive","polluted"])
+    plot_confusion_matrix(y_true,y_pred,["陰性","陽性","污染"])
     evaluate(y_true,y_pred)
-    with open('./two_stage_result_'+form+'.csv','w') as file:
+    with open('./two_stage_transfer_result_'+form+'.csv','w') as file:
         file.write('file,true,pred,0_0,0_1,1_0,1_1\n')
         for i in range(len(vali_x_file_list)):
             file.write(vali_x_file_list[i]+','+str(y_true[i])+','+str(y_pred[i])+','+str(prob_y_0[i][0])+','+str(prob_y_0[i][1])+','+str(prob_y_1[i][0])+','+str(prob_y_1[i][1])+'\n')
@@ -494,7 +488,8 @@ def main():
         read_x_y_mapping('vali',False)
         vali_x_file_list=vali_x_file_list_backup
         vali_y=vali_y_backup
-        vali_x=load_all_valid(vali_x_file_list)
+        load_all_valid(vali_x_file_list)
+        print(np.shape(vali_x))
         form=os.sys.argv[2]
         predict(form,True)
 if __name__ == "__main__":

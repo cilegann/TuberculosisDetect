@@ -4,7 +4,7 @@
 *.PNG
 *.png
 *.psd
-cnn_model/
+models/
 data/
 saliency_map/
 Graph/
