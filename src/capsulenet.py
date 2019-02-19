@@ -14,6 +14,7 @@ from keras.callbacks import CSVLogger,EarlyStopping,ModelCheckpoint,TensorBoard
 from keras.optimizers import Adam
 from Capsule_Keras import *
 from evaluate_tools import plot_confusion_matrix,evaluate
+import keras.backend.tensorflow_backend as KTF
 
 width=420
 height=131
@@ -160,14 +161,14 @@ def train(args):
     cbtb = TensorBoard(log_dir='./Graph',batch_size=batch_size)
     cbckpt=ModelCheckpoint('./models/capsule_'+nowtime+'_best.h5',monitor='val_loss',save_best_only=True)
     cbes=EarlyStopping(monitor='val_loss', patience=10, verbose=0, mode='auto')
-    model.compile(loss=lambda y_true,y_pred: y_true*K.relu(0.9-y_pred)**2+0.5*(1-y_true)*K.relu(y_pred-0.1)**2,optimizer=Adam(),metrics=['accuracy','loss'])
+    model.compile(loss=lambda y_true,y_pred: y_true*K.relu(0.9-y_pred)**2+0.5*(1-y_true)*K.relu(y_pred-0.1)**2,optimizer=Adam(),metrics=['accuracy'])
     x_train_list,y_train=read_x_y_mapping('train',True)
     x_vali_list,y_vali=read_x_y_mapping('vali',False)
     x_vali=load_all_valid(x_vali_list)
     model.fit_generator(data_generator(True,x_train_list,y_train),
                         validation_data=(x_vali,y_vali),
                         validation_steps=1,
-                        steps_per_epoch=len(x_train_list//batch_size),
+                        steps_per_epoch=(len(x_train_list)//batch_size),
                         epochs=args.epochs,
                         callbacks=[cblog,cbtb,cbckpt,cbes])
     model.save('./models/capsule_'+nowtime+'.h5')
@@ -183,7 +184,7 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Capsule Network on TB.")
     parser.add_argument('--train',action='store_true',help='Training mode')
-    parser.add_argument('--test',action='store_ture',help='Tesing mode')
+    parser.add_argument('--test',action='store_true',help='Tesing mode')
     parser.add_argument('-m','--model',type=str,help='The model you want to test on')
     parser.add_argument('-r','--routing',type=int,help='#iteration of routing algorithm')
     parser.add_argument('-b','--batch',type=int,default=32,help='Batch size')
