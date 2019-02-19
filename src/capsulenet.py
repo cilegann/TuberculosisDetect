@@ -9,13 +9,15 @@ from keras import utils as np_utils
 from keras.layers import *
 from keras.models import Model
 from keras import backend as K
+from keras.callbacks import CSVLogger,EarlyStopping,ModelCheckpoint,TensorBoard
+from keras.optimizers import Adam
 from Capsule_Keras import *
+from evaluate_tools import plot_confusion_matrix,evaluate
 
 width=420
 height=131
 num_of_classes=3
 batch_size=32
-
 train_mapping_file='./data/CNN_x_y_mapping.csv'
 vali_mapping_file='./data/CNN_vali_x_y_mapping.csv'
 
@@ -26,12 +28,13 @@ polluted_vali_basedir='./data/vali/polluted'
 positive_vali_basedir='./data/vali/positive'
 negative_vali_basedir='./data/vali/negative'
 
-def config_environment(batch_size=32):
+def config_environment(args):
+    global batch_size
     config = tf.ConfigProto()
     config.gpu_options.allow_growth=True
     session = tf.Session(config=config)
     KTF.set_session(session)
-    batch_size=batch_size
+    batch_size=args.batch
 
 ###################################################################################
 
@@ -117,7 +120,17 @@ def data_generator(is_training,file_lists,y):
 
 ###################################################################################
 
-def get_model():
+def load_all_valid(file_list):
+    x_vali=np.zeros([len(file_list),height,width,num_of_classes])
+    for i,f in enumerate(file_list):
+        x_vali[i]=Image.open(f).resize([width,height])
+    x_vali=x_vali.astype('float64')
+    x_vali/=255.
+    return x_vali
+
+###################################################################################
+
+def get_model(args):
     input_image = Input(shape=(None,None,1))
     cnn = Conv2D(64, (3, 3), activation='relu')(input_image)
     cnn = Conv2D(64, (3, 3), activation='relu')(cnn)
@@ -125,7 +138,7 @@ def get_model():
     cnn = Conv2D(128, (3, 3), activation='relu')(cnn)
     cnn = Conv2D(128, (3, 3), activation='relu')(cnn)
     cnn = Reshape((-1, 128))(cnn)
-    capsule = Capsule(10, 16, 3, True)(cnn)
+    capsule = Capsule(num_of_classes, 16, args.routing, args.share)(cnn)
     output = Lambda(lambda x: K.sqrt(K.sum(K.square(x), 2)), output_shape=(10,))(capsule)
     model = Model(inputs=input_image, outputs=output)
 
@@ -135,11 +148,48 @@ def get_model():
 
 ###################################################################################
 
-def train():
-    model=get_model()
-    mode
+def train(args):
+    model=get_model(args)
+    if not os.path.exists('./log'):
+        os.mkdir('./log')
+    nowtime=time.strftime("%Y-%m-%d-%H:%M", time.localtime())
+    cblog = CSVLogger('./log/capsule_'+nowtime+'.csv')
+    cbtb = TensorBoard(log_dir='./Graph',batch_size=batch_size)
+    cbckpt=ModelCheckpoint('./models/capsule_'+nowtime+'_best.h5',monitor='val_loss',save_best_only=True)
+    cbes=EarlyStopping(monitor='val_loss', patience=10, verbose=0, mode='auto')
+    model.compile(loss=lambda y_true,y_pred: y_true*K.relu(0.9-y_pred)**2+0.5*(1-y_true)*K.relu(y_pred-0.1)**2,optimizer=Adam(),metrics=['accuracy','loss'])
+    x_train_list,y_train=read_x_y_mapping('train',True)
+    x_vali_list,y_vali=read_x_y_mapping('vali',False)
+    x_vali=load_all_valid(x_vali_list)
+    model.fit_generator(data_generator(True,x_train_list,y_train),
+                        validation_data=(x_vali,y_vali),
+                        validation_steps=1,
+                        steps_per_epoch=len(x_train_list//batch_size),
+                        epochs=args.epochs,
+                        callbacks=[cblog,cbtb,cbckpt,cbes])
+    model.save('./models/capsule_'+nowtime+'.h5')
+    y_pred=model.predict(x_vali)
+    y_pred=np.argmax(y_pred,axis=1)
+    y_true=np.argmax(y_vali,axis=1)
+    labels=['negative','positive','polluted']
+    plot_confusion_matrix(y_true,y_pred,labels)
+    evaluate(y_true,y_pred)
+    
 
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Capsule Network on TB.")
-    parser.add_argument('-train')
+    parser.add_argument('--train',action='store_true',help='Training mode')
+    parser.add_argument('--test',action='store_ture',help='Tesing mode')
+    parser.add_argument('-m','--model',type=str,help='The model you want to test on')
+    parser.add_argument('-r','--routing',type=int,help='#iteration of routing algorithm')
+    parser.add_argument('-b','--batch',type=int,default=32,help='Batch size')
+    parser.add_argument('-e','--epochs',type=int,default=200,help='#Epochs')
+    parser.add_argument('-s','--share',action='store_true',help='Share weight or not')
+    args=parser.parse_args()
+    print(args)
+    config_environment(batch_size=args.batch)
+    if args.train:
+        print("Train")
+        train(args)
+        
