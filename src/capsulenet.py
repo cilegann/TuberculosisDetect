@@ -1,4 +1,5 @@
 import os
+import time
 import tensorflow as tf
 import numpy
 import random
@@ -112,7 +113,6 @@ def data_generator(is_training,file_lists,y):
     
         file_list = file_lists[index-batch_size:index]
         label_list = y[index-batch_size:index]
-
         output = np.zeros([batch_size, height,width, 3])
         for i in range(batch_size):
             output[i]=preprocessing_augment(Image.open(file_list[i]),label_list[i])
@@ -131,15 +131,18 @@ def load_all_valid(file_list):
 ###################################################################################
 
 def get_model(args):
-    input_image = Input(shape=(None,None,1))
-    cnn = Conv2D(64, (3, 3), activation='relu')(input_image)
+    input_image = Input(shape=(None,None,3))
+    cnn = Conv2D(32, (3, 3), activation='relu',data_format='channels_last')(input_image)
+    cnn = Conv2D(32, (3, 3), activation='relu')(cnn)
+    cnn = MaxPooling2D((2,2))(cnn)
     cnn = Conv2D(64, (3, 3), activation='relu')(cnn)
-    cnn = AveragePooling2D((2,2))(cnn)
+    cnn = Conv2D(64, (3, 3), activation='relu')(cnn)
+    cnn = MaxPooling2D((2,2))(cnn)
     cnn = Conv2D(128, (3, 3), activation='relu')(cnn)
     cnn = Conv2D(128, (3, 3), activation='relu')(cnn)
     cnn = Reshape((-1, 128))(cnn)
     capsule = Capsule(num_of_classes, 16, args.routing, args.share)(cnn)
-    output = Lambda(lambda x: K.sqrt(K.sum(K.square(x), 2)), output_shape=(10,))(capsule)
+    output = Lambda(lambda x: K.sqrt(K.sum(K.square(x), 2)), output_shape=(10,))(capsule) #L2 norm of each capsule
     model = Model(inputs=input_image, outputs=output)
 
     model.summary()
@@ -188,7 +191,7 @@ if __name__ == "__main__":
     parser.add_argument('-s','--share',action='store_true',help='Share weight or not')
     args=parser.parse_args()
     print(args)
-    config_environment(batch_size=args.batch)
+    config_environment(args)
     if args.train:
         print("Train")
         train(args)
