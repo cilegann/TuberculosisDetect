@@ -131,6 +131,9 @@ def load_all_valid(file_list):
 
 ###################################################################################
 
+def marginLoss(y_true,y_pred):
+    return y_true*K.relu(0.9-y_pred)**2+0.5*(1-y_true)*K.relu(y_pred-0.1)**2
+
 def get_model(args):
     input_image = Input(shape=(None,None,3))
     cnn = Conv2D(32, (3, 3), activation='relu')(input_image)
@@ -161,7 +164,7 @@ def train(args):
     cbtb = TensorBoard(log_dir='./Graph',batch_size=batch_size)
     cbckpt=ModelCheckpoint('./models/capsule_'+nowtime+'_best.h5',monitor='val_loss',save_best_only=True)
     cbes=EarlyStopping(monitor='val_loss', patience=10, verbose=0, mode='auto')
-    model.compile(loss=lambda y_true,y_pred: y_true*K.relu(0.9-y_pred)**2+0.5*(1-y_true)*K.relu(y_pred-0.1)**2,optimizer=Adam(),metrics=['accuracy'])
+    model.compile(loss=marginLoss,optimizer=Adam(),metrics=['accuracy'])
     x_train_list,y_train=read_x_y_mapping('train',True)
     x_vali_list,y_vali=read_x_y_mapping('vali',False)
     x_vali=load_all_valid(x_vali_list)
@@ -171,7 +174,6 @@ def train(args):
                         steps_per_epoch=(len(x_train_list)//batch_size),
                         epochs=args.epochs,
                         callbacks=[cblog,cbtb,cbckpt,cbes])
-    #TODO to json
     model.save('./models/capsule_'+nowtime+'.h5')
     model.save_weights('./models/capsule_'+nowtime+'_weight.h5')
     y_pred=model.predict(x_vali)
@@ -184,13 +186,15 @@ def train(args):
 ###################################################################################
 
 def test(args):
-    pass
-
+    model=load_model(args.model)
+    x_vali_list,y_vali=read_x_y_mapping('vali',False)
+    x_vali=load_all_valid(x_vali)
+    y_pred=model.predict(x_vali)
+    y_pred=np.argmax(y_pred,axis=1)
+    y_true=np.argmax(y_vali,axis=1)
+    plot_confusion_matrix(y_true,y_pred,["neg","pos","pol"])
+    evaluate(y_true,y_pred)
 ###################################################################################
-
-def marginLoss(y_true,y_pred):
-    return y_true*K.relu(0.9-y_pred)**2+0.5*(1-y_true)*K.relu(y_pred-0.1)**2
-
 
 def dev(args):
     model=get_model(args)
