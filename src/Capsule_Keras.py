@@ -17,6 +17,7 @@ def softmax(x, axis=-1):
     return ex/K.sum(ex, axis=axis, keepdims=True)
 
 
+
 #A Capsule Implement with Pure Keras
 class Capsule(Layer):
     def __init__(self, num_capsule, dim_capsule, routings=3, share_weights=True, activation='squash', **kwargs):
@@ -77,3 +78,14 @@ class Capsule(Layer):
 
     def compute_output_shape(self, input_shape):
         return (None, self.num_capsule, self.dim_capsule)
+
+    def get_config(self):
+        config = {
+        'num_capsule': self.num_capsule,
+        'dim_capsule': self.dim_capsule,
+        'routings':self.routings,
+        'share_weights':self.share_weights,
+        'activation':self.activation
+        }
+        base_config = super(Capsule, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))

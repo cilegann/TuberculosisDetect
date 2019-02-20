@@ -188,22 +188,25 @@ def test(args):
 
 ###################################################################################
 
+def marginLoss(y_true,y_pred):
+    return y_true*K.relu(0.9-y_pred)**2+0.5*(1-y_true)*K.relu(y_pred-0.1)**2
+
+
 def dev(args):
     model=get_model(args)
     
-    model.compile(loss=lambda y_true,y_pred: y_true*K.relu(0.9-y_pred)**2+0.5*(1-y_true)*K.relu(y_pred-0.1)**2,optimizer=Adam(),metrics=['accuracy'])
-    model_json = model.to_json()
-    with open("model.json", "w") as json_file:
-        json_file.write(model_json)
+    model.compile(loss=marginLoss,optimizer=Adam(),metrics=['accuracy'])
     model.save("all.h5")
-    model.save_weights("weight.h5")
 
     model=None
     json_file = open('model.json', 'r')
     loaded_model_json = json_file.read()
     json_file.close()
-    loaded_model = model_from_json(loaded_model_json, custom_objects={'capsule_1': Capsule})
+    loaded_model = model_from_json(loaded_model_json, custom_objects={'Capsule': Capsule,'marginLoss':marginLoss})
     loaded_model.load_weights("weight.h5")
+    model.summary()
+    model=load_model("all.h5", custom_objects={'Capsule': Capsule,'marginLoss':marginLoss})
+    model.summary()
     pass
 
 ###################################################################################
