@@ -37,7 +37,7 @@ def config_environment(args):
     session = tf.Session(config=config)
     KTF.set_session(session)
     batch_size=args.batch
-
+    os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 ###################################################################################
 
 def create_x_y_mapping(train_or_vali):
@@ -136,16 +136,14 @@ def marginLoss(y_true,y_pred):
 
 def get_model(args):
     input_image = Input(shape=(None,None,3))
-    cnn = Conv2D(32, (3, 3), activation='relu')(input_image)
-    cnn = Conv2D(32, (3, 3), activation='relu')(cnn)
-    cnn = MaxPooling2D((2,2))(cnn)
-    cnn = Conv2D(64, (3, 3), activation='relu',data_format='channels_last')(cnn)
+    cnn = Conv2D(64, (3, 3), activation='relu',data_format='channels_last')(input_image)
     cnn = Conv2D(64, (3, 3), activation='relu')(cnn)
-    cnn = MaxPooling2D((2,2))(cnn)
+    cnn = AveragePooling2D((2,2))(cnn)
     cnn = Conv2D(128, (3, 3), activation='relu')(cnn)
     cnn = Conv2D(128, (3, 3), activation='relu')(cnn)
     cnn = Reshape((-1, 128))(cnn)
-    capsule = Capsule(num_of_classes, 16, args.routing, args.share)(cnn)
+    capsule = Capsule(16, 16, args.routing, args.share)(cnn)
+    capsule = Capsule(num_of_classes,16,args.routing,args.share)(capsule)
     output = Lambda(lambda x: K.sqrt(K.sum(K.square(x), 2)), output_shape=(num_of_classes,))(capsule) #L2 norm of each capsule
     model = Model(inputs=input_image, outputs=output)
 
@@ -188,7 +186,7 @@ def train(args):
 def test(args):
     model=load_model(args.model)
     x_vali_list,y_vali=read_x_y_mapping('vali',False)
-    x_vali=load_all_valid(x_vali)
+    x_vali=load_all_valid(x_vali_list)
     y_pred=model.predict(x_vali)
     y_pred=np.argmax(y_pred,axis=1)
     y_true=np.argmax(y_vali,axis=1)
