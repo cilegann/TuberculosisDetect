@@ -8,7 +8,7 @@ import cv2
 from PIL import Image
 from keras import utils as np_utils
 from keras.layers import *
-from keras.models import Model
+from keras.models import Model,load_model,model_from_json
 from keras import backend as K
 from keras.callbacks import CSVLogger,EarlyStopping,ModelCheckpoint,TensorBoard
 from keras.optimizers import Adam
@@ -133,17 +133,17 @@ def load_all_valid(file_list):
 
 def get_model(args):
     input_image = Input(shape=(None,None,3))
-    cnn = Conv2D(32, (3, 3), activation='relu',data_format='channels_last')(input_image)
+    cnn = Conv2D(32, (3, 3), activation='relu')(input_image)
     cnn = Conv2D(32, (3, 3), activation='relu')(cnn)
     cnn = MaxPooling2D((2,2))(cnn)
-    cnn = Conv2D(64, (3, 3), activation='relu')(cnn)
+    cnn = Conv2D(64, (3, 3), activation='relu',data_format='channels_last')(cnn)
     cnn = Conv2D(64, (3, 3), activation='relu')(cnn)
     cnn = MaxPooling2D((2,2))(cnn)
     cnn = Conv2D(128, (3, 3), activation='relu')(cnn)
     cnn = Conv2D(128, (3, 3), activation='relu')(cnn)
     cnn = Reshape((-1, 128))(cnn)
     capsule = Capsule(num_of_classes, 16, args.routing, args.share)(cnn)
-    output = Lambda(lambda x: K.sqrt(K.sum(K.square(x), 2)), output_shape=(10,))(capsule) #L2 norm of each capsule
+    output = Lambda(lambda x: K.sqrt(K.sum(K.square(x), 2)), output_shape=(num_of_classes,))(capsule) #L2 norm of each capsule
     model = Model(inputs=input_image, outputs=output)
 
     model.summary()
@@ -171,7 +171,9 @@ def train(args):
                         steps_per_epoch=(len(x_train_list)//batch_size),
                         epochs=args.epochs,
                         callbacks=[cblog,cbtb,cbckpt,cbes])
+    #TODO to json
     model.save('./models/capsule_'+nowtime+'.h5')
+    model.save_weights('./models/capsule_'+nowtime+'_weight.h5')
     y_pred=model.predict(x_vali)
     y_pred=np.argmax(y_pred,axis=1)
     y_true=np.argmax(y_vali,axis=1)
@@ -179,14 +181,41 @@ def train(args):
     plot_confusion_matrix(y_true,y_pred,labels)
     evaluate(y_true,y_pred)
     
+###################################################################################
+
+def test(args):
+    pass
+
+###################################################################################
+
+def dev(args):
+    model=get_model(args)
+    
+    model.compile(loss=lambda y_true,y_pred: y_true*K.relu(0.9-y_pred)**2+0.5*(1-y_true)*K.relu(y_pred-0.1)**2,optimizer=Adam(),metrics=['accuracy'])
+    model_json = model.to_json()
+    with open("model.json", "w") as json_file:
+        json_file.write(model_json)
+    model.save("all.h5")
+    model.save_weights("weight.h5")
+
+    model=None
+    json_file = open('model.json', 'r')
+    loaded_model_json = json_file.read()
+    json_file.close()
+    loaded_model = model_from_json(loaded_model_json, custom_objects={'capsule_1': Capsule})
+    loaded_model.load_weights("weight.h5")
+    pass
+
+###################################################################################
 
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Capsule Network on TB.")
     parser.add_argument('--train',action='store_true',help='Training mode')
     parser.add_argument('--test',action='store_true',help='Tesing mode')
+    parser.add_argument('--dev',action='store_true',help='Dev testing mode')
     parser.add_argument('-m','--model',type=str,help='The model you want to test on')
-    parser.add_argument('-r','--routing',type=int,help='#iteration of routing algorithm')
+    parser.add_argument('-r','--routing',type=int,default=3,help='#iteration of routing algorithm')
     parser.add_argument('-b','--batch',type=int,default=32,help='Batch size')
     parser.add_argument('-e','--epochs',type=int,default=200,help='#Epochs')
     parser.add_argument('-s','--share',action='store_true',help='Share weight or not')
@@ -194,6 +223,14 @@ if __name__ == "__main__":
     print(args)
     config_environment(args)
     if args.train:
-        print("Train")
+        print("Training mode")
         train(args)
-        
+    if args.test:
+        if args.model is not None:
+            print("Testing model: ",args.model)
+            test(args)
+        else:
+            print("Please specify the model you want to test on with '-m model_path'")
+    if args.dev:
+        print("Dev testing mode")
+        dev(args)
