@@ -96,28 +96,31 @@ def preprocessing_augment(data,label):
 
 train_index=0
 vali_index=0
-
-def data_generator(is_training,file_lists,y):
-    global train_index
-    global vali_index
-    while(1):
-        if is_training == True:
-            if train_index + batch_size > len(file_lists):
-                train_index = 0
-            train_index += batch_size
-            index=train_index
-        else:
-            if vali_index + batch_size > len(file_lists):
-                vali_index = 0
-            vali_index += batch_size
-            index=vali_index
-    
-        file_list = file_lists[index-batch_size:index]
-        label_list = y[index-batch_size:index]
-        output = np.zeros([batch_size, height,width, 3])
-        for i in range(batch_size):
-            output[i]=preprocessing_augment(Image.open(file_list[i]),label_list[i])
-        yield output, label_list
+train_indexes
+def data_generator(is_training,file_lists,y,is_balanced):
+    if is_balanced:
+        pass
+    else:
+        global train_index
+        global vali_index
+        while(1):
+            if is_training == True:
+                if train_index + batch_size > len(file_lists):
+                    train_index = 0
+                train_index += batch_size
+                index=train_index
+            else:
+                if vali_index + batch_size > len(file_lists):
+                    vali_index = 0
+                vali_index += batch_size
+                index=vali_index
+        
+            file_list = file_lists[index-batch_size:index]
+            label_list = y[index-batch_size:index]
+            output = np.zeros([batch_size, height,width, 3])
+            for i in range(batch_size):
+                output[i]=preprocessing_augment(Image.open(file_list[i]),label_list[i])
+            yield output, label_list
 
 ###################################################################################
 
@@ -142,7 +145,7 @@ def get_model(args):
     cnn = Conv2D(128, (3, 3), activation='relu')(cnn)
     cnn = Conv2D(128, (3, 3), activation='relu')(cnn)
     cnn = Reshape((-1, 128))(cnn)
-    capsule = Capsule(16, 16, args.routing, args.share)(cnn)
+    capsule = Capsule(8, 16, args.routing, args.share)(cnn)
     capsule = Capsule(num_of_classes,16,args.routing,args.share)(capsule)
     output = Lambda(lambda x: K.sqrt(K.sum(K.square(x), 2)), output_shape=(num_of_classes,))(capsule) #L2 norm of each capsule
     model = Model(inputs=input_image, outputs=output)
