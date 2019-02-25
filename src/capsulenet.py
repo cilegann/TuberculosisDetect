@@ -17,10 +17,6 @@ from evaluate_tools import plot_confusion_matrix,evaluate
 import keras.backend.tensorflow_backend as KTF
 from utils import *
 
-width=420
-height=131
-num_of_classes=3
-batch_size=32
 train_mapping_file='./data/CNN_x_y_mapping.csv'
 vali_mapping_file='./data/CNN_vali_x_y_mapping.csv'
 mappings=[train_mapping_file,vali_mapping_file]
@@ -40,7 +36,6 @@ def config_environment(args):
     config.gpu_options.allow_growth=True
     session = tf.Session(config=config)
     KTF.set_session(session)
-    batch_size=args.batch
     os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
 def marginLoss(y_true,y_pred):
@@ -71,17 +66,17 @@ def train(args):
         os.mkdir('./log')
     nowtime=time.strftime("%Y-%m-%d-%H:%M", time.localtime())
     cblog = CSVLogger('./log/capsule_'+nowtime+'.csv')
-    cbtb = TensorBoard(log_dir='./Graph',batch_size=batch_size)
+    cbtb = TensorBoard(log_dir='./Graph',batch_size=args.batch)
     cbckpt=ModelCheckpoint('./models/capsule_'+nowtime+'_best.h5',monitor='val_loss',save_best_only=True)
     cbes=EarlyStopping(monitor='val_loss', patience=10, verbose=0, mode='auto')
     model.compile(loss=marginLoss,optimizer=Adam(),metrics=['accuracy'])
-    x_train_list,y_train=read_x_y_mapping(mappings,basedirs,'train',True,args)
-    x_vali_list,y_vali=read_x_y_mapping(mappings,basedirs,'train',True,args)
+    x_train_list,y_train,indexes = read_x_y_mapping(mappings,basedirs,'train',True,args)
+    x_vali_list,y_vali,_ = read_x_y_mapping(mappings,basedirs,'vali',True,args)
     x_vali=load_all_valid(x_vali_list,args)
-    model.fit_generator(data_generator(True,x_train_list,y_train),
+    model.fit_generator(data_generator(True,x_train_list,y_train,args,indexes),
                         validation_data=(x_vali,y_vali),
                         validation_steps=1,
-                        steps_per_epoch=(len(x_train_list)//batch_size),
+                        steps_per_epoch=(len(x_train_list)//args.batch),
                         epochs=args.epochs,
                         callbacks=[cblog,cbtb,cbckpt,cbes])
     model.save('./models/capsule_'+nowtime+'.h5')
@@ -97,7 +92,7 @@ def train(args):
 
 def test(args):
     model=load_model(args.model)
-    x_vali_list,y_vali=read_x_y_mapping(mappings,basedirs,'vali',False,args)
+    x_vali_list,y_vali,_=read_x_y_mapping(mappings,basedirs,'vali',False,args)
     x_vali=load_all_valid(x_vali_list,args)
     y_pred=model.predict(x_vali)
     y_pred=np.argmax(y_pred,axis=1)
@@ -145,6 +140,9 @@ if __name__ == "__main__":
     config_environment(args)
     if args.train:
         print("Training mode")
+        if args.balance:
+            args.batch-=(args.batch%3)
+            print("Under balance mode, change batch size to multiple of 3:",args.batch)
         train(args)
     if args.test:
         if args.model is not None:
