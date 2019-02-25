@@ -16,7 +16,7 @@ from keras.layers import Activation,Dense,Dropout,MaxPooling2D,Flatten,Conv2D,Gl
 from keras.optimizers import rmsprop,adam,SGD,Adadelta
 import keras.losses
 from keras.layers.normalization import BatchNormalization
-from keras.callbacks import EarlyStopping,ReduceLROnPlateau,ModelCheckpoint,TensorBoard
+from keras.callbacks import EarlyStopping,ReduceLROnPlateau,ModelCheckpoint,TensorBoard,CSVLogger
 from keras.preprocessing.image import ImageDataGenerator
 import keras.backend.tensorflow_backend as KTF
 
@@ -30,9 +30,9 @@ from evaluate_tools import cam,plot_confusion_matrix
 #predict: python3 scriptname predict [modelname]
 #saliencymap: python3 scriptname cam [modelname] [dataset] [portion] [amount] [save/show]
 
-positive_weigt=15.
-polluted_weight=4.5
-negative_weight=1.4
+positive_weigt=1
+polluted_weight=1
+negative_weight=1
 if 'balance' in os.sys.argv:
     positive_weigt=1
     polluted_weight=1
@@ -280,7 +280,16 @@ def data_generator_balance(is_training):
 def get_model():
     model = Sequential()
 
-    model.add(Conv2D(64,(3,3),strides=(1,1),input_shape=(height,width,3),data_format='channels_last'))
+    model.add(Conv2D(32,(3,3),strides=(1,1),input_shape=(height,width,3),data_format='channels_last'))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+    model.add(Conv2D(32,(3,3),strides=(1,1)))
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
+    model.add(MaxPooling2D(2,2))
+
+
+    model.add(Conv2D(64,(3,3),strides=(1,1)))
     model.add(Activation('relu'))
     model.add(BatchNormalization())
     model.add(Conv2D(64,(3,3),strides=(1,1)))
@@ -288,42 +297,15 @@ def get_model():
     model.add(BatchNormalization())
     model.add(MaxPooling2D(2,2))
 
-    model.add(Conv2D(128,(3,3),strides=(1,1)))
-    model.add(Activation('relu'))
-    model.add(BatchNormalization())
-    model.add(Conv2D(128,(3,3),strides=(1,1)))
-    model.add(Activation('relu'))
-    model.add(BatchNormalization())
-    model.add(MaxPooling2D(2,2))
-
-    model.add(Conv2D(256,(3,3),strides=(1,1)))
-    model.add(Activation('relu'))
-    model.add(BatchNormalization())
-    model.add(Conv2D(256,(3,3),strides=(1,1)))
-    model.add(Activation('relu'))
-    model.add(BatchNormalization())
-    model.add(MaxPooling2D(2,2))
-
-    # model.add(Conv2D(1024,(3,3),strides=(1,1)))
-    # model.add(Activation('relu'))
-    # model.add(BatchNormalization())
-    # model.add(Conv2D(1024,(3,3),strides=(1,1)))
-    # model.add(Activation('relu'))
-    # model.add(BatchNormalization())
-    # model.add(Conv2D(1024,(3,3),strides=(1,1)))
-    # model.add(Activation('relu'))
-    # model.add(BatchNormalization())
-    # model.add(MaxPooling2D(2,2))
 
     model.add(Flatten())
-
-    model.add(Dense(256))
-    model.add(Activation('relu'))
     model.add(Dropout(0.3))
+
+    model.add(Dense(1024))
+    model.add(Activation('relu'))
     model.add(BatchNormalization())
 
-    model.add(Dense(256))
-    model.add(Dropout(0.3))
+    model.add(Dense(1024))
     model.add(Activation('relu'))
     model.add(BatchNormalization())
 
