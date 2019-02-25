@@ -106,6 +106,10 @@ def data_generator(is_training,file_lists,y,args,indexes=None):
                         if(train_indexes[i]>indexes[i][1]):
                             train_indexes[i]=indexes[i][0]
                 label_list=np.asarray(label_list)
+                c=list(zip(file_list,label_list))
+                random.shuffle(c)
+                file_list,label_list=zip(*c)
+                
                 output = np.zeros([batch_size, height,width, 3])
                 for i in range(batch_size):
                     output[i]=preprocessing_augment(Image.open(file_list[i]),label_list[i],args)
