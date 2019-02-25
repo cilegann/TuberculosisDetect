@@ -80,6 +80,7 @@ def preprocessing_augment(data,label,args):
 train_index=0
 vali_index=0
 train_indexes=[-1,-1,-1]
+
 def data_generator(is_training,file_lists,y,args,indexes=None):
     is_balanced=args.balance
     batch_size=args.batch
@@ -90,8 +91,25 @@ def data_generator(is_training,file_lists,y,args,indexes=None):
         if train_indexes==[-1,-1,-1]:
             train_indexes=[indexes[i][0] for i in range(3)]
         while(1):
-            file_list=[]
-            label_list=np.zeros(batch_size,3)
+            if is_training:
+                file_list=[]
+                label_list=[]
+                for i in range(3):
+                    # flag: train_indexes[i]
+                    # start: indexes[i][0]
+                    # end: indexes[i][1]
+                    # length: indexes[i][2]
+                    for n in range(batch_size/3):
+                        file_list.append(file_lists[ train_indexes[i] ])
+                        label_list.append(y[ train_indexes[i] ])
+                        train_indexes[i]+=1
+                        if(train_indexes[i]>indexes[i][1]):
+                            train_indexes[i]=indexes[i][0]
+                label_list=np.asarray(label_list)
+                output = np.zeros([batch_size, height,width, 3])
+                for i in range(batch_size):
+                    output[i]=preprocessing_augment(Image.open(file_list[i]),label_list[i],args)
+                yield output, label_list
             
     else:
         global train_index
