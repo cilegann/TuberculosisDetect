@@ -50,7 +50,7 @@ def get_model(args):
     cnn = Conv2D(128, (3, 3), activation='relu')(cnn)
     cnn = Reshape((-1, 128))(cnn)
     capsule = Capsule(8, 16, args.routing, args.share)(cnn)
-    capsule = Capsule(num_of_classes,16,args.routing,args.share)(capsule)
+    capsule = Capsule(args.n_labels,16,args.routing,args.share)(capsule)
     output = Lambda(lambda x: K.sqrt(K.sum(K.square(x), 2)), output_shape=(num_of_classes,))(capsule) #L2 norm of each capsule
     model = Model(inputs=input_image, outputs=output)
 
