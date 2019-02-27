@@ -11,3 +11,4 @@ Graph/
 data_origin_distribution_version/
 .DS_Store
 *.pyc
+*.DS_Store
