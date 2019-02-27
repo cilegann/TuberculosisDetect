@@ -140,7 +140,7 @@ def data_generator(is_training,file_lists,y,args,indexes=None):
 ###################################################################################
 
 def load_all_valid(file_list,args):
-    x_vali=np.zeros([len(file_list),args.height,args.width,args.n_labes])
+    x_vali=np.zeros([len(file_list),args.height,args.width,args.n_labels])
     for i,f in enumerate(file_list):
         x_vali[i]=Image.open(f).resize([args.width,args.height])
     x_vali=x_vali.astype('float64')
