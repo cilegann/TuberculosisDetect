@@ -51,7 +51,7 @@ def get_model(args):
     cnn = Reshape((-1, 128))(cnn)
     capsule = Capsule(8, 16, args.routing, args.share)(cnn)
     capsule = Capsule(args.n_labels,16,args.routing,args.share)(capsule)
-    output = Lambda(lambda x: K.sqrt(K.sum(K.square(x), 2)), output_shape=(num_of_classes,))(capsule) #L2 norm of each capsule
+    output = Lambda(lambda x: K.sqrt(K.sum(K.square(x), 2)), output_shape=(args.n_labels,))(capsule) #L2 norm of each capsule
     model = Model(inputs=input_image, outputs=output)
 
     model.summary()
