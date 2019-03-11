@@ -278,6 +278,13 @@ def predict():
     prob_y = model.predict(vali_x)
     y_true=[]
     y_pred=[]
+    with open('cnn_prob.csv','w') as file:
+        file.write("filename,real_value,prob0,prob1,prob2\n")
+        for f,r,p in zip(vali_x_file_list,vali_y,prob_y):
+            file.write(f+','+str(np.argmax(r)))
+            for prob in p:
+                file.write(","+str(prob))
+            file.write("\n")
     with open('result.csv','w') as file:
         file.write("filename,real_value,pred_value\n")
         for i,p in enumerate(vali_x_file_list):

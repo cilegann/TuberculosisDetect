@@ -454,6 +454,13 @@ def predict(form,best=True):
             result[i][0]=prob_y_0[i][0]*prob_y_1[i][1]
             result[i][1]=prob_y_0[i][1]
             result[i][2]=prob_y_0[i][0]*prob_y_1[i][0]
+    with open('tsyolo_prob.csv','w') as file:
+        file.write("filename,real_value,prob0,prob1,prob2\n")
+        for f,r,p in zip(vali_x_file_list,vali_y,result):
+            file.write(f+','+str(np.argmax(r)))
+            for prob in p:
+                file.write(","+str(prob))
+            file.write("\n")
     y_true=np.argmax(vali_y,axis=1)
     y_pred=np.argmax(result,axis=1)
     plot_confusion_matrix(y_true,y_pred,["陰性","陽性","污染"])
