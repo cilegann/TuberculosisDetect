@@ -28,6 +28,7 @@ def cam(filename,img,label,model,backprop_modifier='guided'):
     im1=plt.imshow(img, cmap=plt.cm.gray, interpolation='nearest')
     im2 = plt.imshow(heatmap,  alpha=.4, interpolation='bilinear')
     plt.savefig(filename,dpi=300)
+    plt.close()
 
 
 def plot_confusion_matrix_by_cm(cmx,classes,filename='cm',title='Confusion matrix',cmap=plt.cm.Blues):
@@ -49,14 +50,16 @@ def plot_confusion_matrix_by_cm(cmx,classes,filename='cm',title='Confusion matri
         plt.text(j, i, '{:.2f}'.format(cmx[i, j]), horizontalalignment="center",
             color="white" if cmx[i, j] > 0.5 else "black",fontsize=20)   
     plt.savefig(filename+'.png')
+    try:
+        plt.show()
+    except:
+        pass
     plt.close()
 
 def plot_confusion_matrix(y_true,y_pred,classes,filename='confusion_matrix',title='Confusion matrix',cmap=plt.cm.Blues):
     labels=["negative", "positive", "polluted"]
     cmx = confusion_matrix(y_true,y_pred)
     cmx=cmx.astype('float')/cmx.sum(axis=1)[:,np.newaxis]
-    print("\n CONFUSION MATRIX")
-    print(cmx)
     plot_confusion_matrix_by_cm(cmx,classes,filename,title,cmap)
     
 
