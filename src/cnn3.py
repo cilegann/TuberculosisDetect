@@ -122,7 +122,7 @@ if __name__=="__main__":
     parser.add_argument('--batch',type=int,default=32,help='Batch size')
     parser.add_argument('--epochs',type=int,default=200,help='#Epochs')
     parser.add_argument('--balance',action='store_true',help='Balance data by undersampling the majiroty data')
-    parser.add_argument('--n_lables',type=int,default=3)
+    parser.add_argument('--n_labels',type=int,default=3)
     args=parser.parse_args()
     config_environment(args)
     if args.train:
