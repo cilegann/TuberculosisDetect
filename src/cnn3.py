@@ -84,7 +84,7 @@ def train(args):
     
     x_train_list,y_train,indexes=read_x_y_mapping(mappings,basedirs,'train',False,args)
     x_vali_list,y_vali,_=read_x_y_mapping(mappings,basedirs,'vali',False,args)
-    x_vali=load_all_model(x_vali_list,args)
+    x_vali=load_all_valid(x_vali_list,args)
     
     model.fit_generator(
         data_generator(True,x_train_list,y_train,args,indexes),
