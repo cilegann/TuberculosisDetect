@@ -106,7 +106,7 @@ def train(args):
     labels=['negative','positive','polluted']
     plot_confusion_matrix(y_ture,y_pred,labels)
     evaluate(y_ture,y_pred)
-    
+
 def test():
     pass
 
@@ -124,7 +124,7 @@ if __name__=="__main__":
     parser.add_argument('--balance',action='store_true',help='Balance data by undersampling the majiroty data')
     parser.add_argument('--n_lables',type=int,default=3)
     args=parser.parse_args()
-    config_environment()
+    config_environment(args)
     if args.train:
         print("Training mode")
         if args.balance:
