@@ -119,7 +119,8 @@ def data_generator(is_training,file_lists,y,args,indexes=None):
                 output = np.zeros([batch_size, height,width, 3])
                 for i in range(batch_size):
                     output[i]=preprocessing_augment(Image.open(file_list[i]),label_list[i],args)
-                yield output, label_list
+                
+                yield output, np.asarray(label_list)
             
     else:
         global train_index
