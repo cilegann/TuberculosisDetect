@@ -129,6 +129,7 @@ if __name__=="__main__":
         print("Training mode")
         if args.balance:
             args.batch-=(args.batch%3)
+        print(args.batch)
         train(args)
 
     if args.test:
