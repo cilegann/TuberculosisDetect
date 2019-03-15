@@ -96,7 +96,7 @@ def train(args):
         data_generator(True,x_train_list,y_train,args,indexes),
         validation_data=(x_vali,y_vali),
         validation_steps=1,
-        steps_per_epoch=(len(x_train_list)//args.batch),
+        steps_per_epoch=(46),
         epochs=args.epochs,
         callbacks=[cblog,cbtb,cbckpt,cbes]
     )
