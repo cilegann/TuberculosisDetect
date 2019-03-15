@@ -4,7 +4,7 @@ from keras import utils as np_utils
 import numpy as np
 import cv2
 from PIL import Image
-def create_x_y_mapping(mappings,basedirs,train_or_vali):
+def create_x_y_mapping(mappings,basedirs,train_or_vali,txt=False):
     train_mapping_file=mappings[0]
     vali_mapping_file=mappings[1]
 
@@ -26,11 +26,17 @@ def create_x_y_mapping(mappings,basedirs,train_or_vali):
         for i,b in enumerate(basedir_list):
             for root, directs,filenames in os.walk(b):
                 for filename in filenames:
-                    if 'txt' not in filename:
-                        pathName=os.path.join(root,filename)
-                        if( ('jpg' in pathName) or ('png' in pathName) ):
-                            f.write(pathName+','+str(i)+'\n')
-
+                    if not txt:
+                        if 'txt' not in filename:
+                            pathName=os.path.join(root,filename)
+                            if( ('jpg' in pathName) or ('png' in pathName) ):
+                                f.write(pathName+','+str(i)+'\n')
+                    else:
+                        if 'txt' in filename:
+                            pathName=os.path.join(root,filename)
+                            if( ('jpg' in pathName) or ('png' in pathName) ):
+                                f.write(pathName+','+str(i)+'\n')
+                    
 def read_x_y_mapping(mappings,basedirs,train_or_vali,shuffle,args):
     train_mapping_file=mappings[0]
     vali_mapping_file=mappings[1]
@@ -139,12 +145,18 @@ def data_generator(is_training,file_lists,y,args,indexes=None):
 
 ###################################################################################
 
-def load_all_valid(file_list,args):
-    x_vali=np.zeros([len(file_list),args.height,args.width,args.n_labels])
-    for i,f in enumerate(file_list):
-        x_vali[i]=Image.open(f).resize([args.width,args.height])
-    x_vali=x_vali.astype('float64')
-    x_vali/=255.
-    return x_vali
+def load_all_valid(file_list,args,txt=False):
+    if not txt:
+        x_vali=np.zeros([len(file_list),args.height,args.width,args.n_labels])
+        for i,f in enumerate(file_list):
+            x_vali[i]=Image.open(f).resize([args.width,args.height])
+        x_vali=x_vali.astype('float64')
+        x_vali/=255.
+        return x_vali
+    else:
+        global vali_x
+        vali_x = np.zeros([len(vali_x_file_list), 173056])
+        for i,f in enumerate(vali_x_file_list):
+            vali_x[i],tmp= vec_reader(f)
 
 ###################################################################################
