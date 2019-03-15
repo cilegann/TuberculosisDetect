@@ -105,7 +105,7 @@ def data_generator(is_training,file_lists,y,args,indexes=None):
                     # start: indexes[i][0]
                     # end: indexes[i][1]
                     # length: indexes[i][2]
-                    for n in range(batch_size/3):
+                    for n in range(int(batch_size/3)):
                         file_list.append(file_lists[ train_indexes[i] ])
                         label_list.append(y[ train_indexes[i] ])
                         train_indexes[i]+=1
