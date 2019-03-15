@@ -6,6 +6,7 @@ import random
 import numpy as np
 import cv2
 from PIL import Image
+from keras import *
 from keras import utils as np_utils
 from keras.layers import *
 from keras.models import Model,load_model,model_from_json
@@ -15,6 +16,7 @@ from keras.optimizers import Adam
 from Capsule_Keras import *
 from evaluate_tools import plot_confusion_matrix,evaluate
 import keras.backend.tensorflow_backend as KTF
+from utils import *
 
 width=420
 height=131
@@ -22,6 +24,7 @@ num_of_classes=3
 batch_size=32
 train_mapping_file='./data/CNN_x_y_mapping.csv'
 vali_mapping_file='./data/CNN_vali_x_y_mapping.csv'
+mappings=[train_mapping_file,vali_mapping_file]
 
 polluted_train_basedir='./data/polluted'
 positive_train_basedir='./data/positive'
@@ -29,108 +32,106 @@ negative_train_basedir='./data/negative'
 polluted_vali_basedir='./data/vali/polluted'
 positive_vali_basedir='./data/vali/positive'
 negative_vali_basedir='./data/vali/negative'
+basedirs=[polluted_train_basedir,positive_train_basedir,negative_train_basedir,polluted_vali_basedir,positive_vali_basedir,negative_vali_basedir]
 
 def config_environment(args):
-    global batch_size
     config = tf.ConfigProto()
     config.gpu_options.allow_growth=True
     session = tf.Session(config=config)
     KTF.set_session(session)
     batch_size=args.batch
     os.environ['CUDA_VISIBLE_DEVICES'] = '1'
-###################################################################################
 
+def get_model(args):
+    model=Sequential()
+    model.add(Conv2D(32,(3,3),input_shape=(args.height,args.width,3),data_format='channels_last',padding='same'))
+    model.add(Activation('relu'))
+    model.add(Conv2D(32,(3,3)))
+    model.add(Activation('relu'))
+    model.add(MaxPool2D(pool_size=(2,2)))
+    model.add(Dropout(0.25))
 
-def create_x_y_mapping(train_or_vali):
-    basedir_list=[]
-    if(train_or_vali=='train'):
-        mapping_file=train_mapping_file
-        basedir_list=[negative_train_basedir,positive_train_basedir,polluted_train_basedir]
-    else:
-        mapping_file=vali_mapping_file
-        basedir_list=[negative_vali_basedir,positive_vali_basedir,polluted_vali_basedir]
-    with open(mapping_file,'w') as f:
-        f.write("file_path,label\n")
-        for i,b in enumerate(basedir_list):
-            for root, directs,filenames in os.walk(b):
-                for filename in filenames:
-                    if 'txt' not in filename:
-                        pathName=os.path.join(root,filename)
-                        if( ('jpg' in pathName) or ('png' in pathName) ):
-                            f.write(pathName+','+str(i)+'\n')
+    model.add(Conv2D(64,(3,3),padding='same'))
+    model.add(Activation('relu'))
+    model.add(Conv2D(64,(3,3)))
+    model.add(Activation('relu'))
+    model.add(MaxPool2D(pool_size=(2,2)))
+    model.add(Dropout(0.25))
 
-###################################################################################
-
-def read_x_y_mapping(train_or_vali,shuffle,args):
-    file_list=[]
-    y=[]
-    if(train_or_vali=='train'):
-        mapping_file=train_mapping_file
-    else:
-        mapping_file=vali_mapping_file
-    if(not os.path.exists(mapping_file)):
-        create_x_y_mapping(train_or_vali)
-    with open(mapping_file,'r') as f:
-        next(f)
-        lines=f.readlines()
-        for line in lines:
-            file_list.append(line.split(',')[0])
-            y.append(line.split(',')[1][:-1])
-    if(shuffle):
-        c=list(zip(file_list,y))
-        random.shuffle(c)
-        file_list,y=zip(*c)
-    else:
-        s0=y.index('0')
-        s1=y.index('1')
-        s2=y.index('2')
-        e0=s1-1
-        e1=s2-1
-        e2=len(y)-1
-        l0=e0-s0+1
-        l1=e1-s1+1
-        l2=e2-s2+1
-    return file_list,np_utils.to_categorical(np.array(y),num_of_classes)
+    model.add(Flatten())
+    model.add(Dense(128))
+    model.add(Activation('relu'))
+    model.add(Dropout(0.5))
+    model.add(Dense(64))
+    model.add(Activation('relu'))
+    model.add(Dense(args.n_labels))
+    model.add(Activation('softmax'))
     
-###################################################################################
+    model.summary()
+    return model
 
-def preprocessing_augment(data,label):
-    data=data.resize([width,height])
-    data = np.asarray(data)
-    data = data.astype('float64')
-    if (random.random() > 0.5 and int(label[1])==1):
-        data = cv2.flip(data, 1)
-    data/=255.
-    return data
+def train(args):
+    model=get_model(args)
+    model.compile(loss='categorical_crossentropy',optimizer=Adam(),metrics=['accuracy'])
 
-###################################################################################
+    if not os.path.exists('./log'):
+        os.mkdir('./log')
+    nowtime=time.strftime("%Y-%m-%d-%H:%M", time.localtime())
+    cblog = CSVLogger('./log/cnn_'+nowtime+'.csv')
+    cbtb = TensorBoard(log_dir='./Graph',batch_size=args.batch)
+    cbckpt=ModelCheckpoint('./models/cnn_'+nowtime+'_best.h5',monitor='val_loss',save_best_only=True)
+    cbes=EarlyStopping(monitor='val_loss', patience=10, verbose=0, mode='auto')
+    
+    x_train_list,y_train,indexes=read_x_y_mapping(mappings,basedirs,'train',False,args)
+    x_vali_list,y_vali,_=read_x_y_mapping(mappings,basedirs,'vali',False,args)
+    x_vali=load_all_model(x_vali_list,args)
+    
+    model.fit_generator(
+        data_generator(True,x_train_list,y_train,args,indexes),
+        validation_data=(x_vali,y_vali),
+        validation_steps=1,
+        steps_per_epoch=(len(x_train_list)//args.batch),
+        epochs=args.epochs,
+        callbacks=[cblog,cbtb,cbckpt,cbes]
+    )
+    model.save('./models/cnn_'+nowtime+'.h5')
+    model.save_weights('./models/cnn_'+nowtime+'_weight.h5')
+    jst=model.to_json()
+    with open('./models/cnn_'+nowtime+'_json.h5','w') as file:
+        file.write(jst)
+    
+    y_pred=model.predict(x_vali)
+    y_pred=np.argmax(y_pred,axis=1)
+    y_ture=np.argmax(y_vali,axis=1)
+    labels=['negative','positive','polluted']
+    plot_confusion_matrix(y_ture,y_pred,labels)
+    evaluate(y_ture,y_pred)
+    
+def test():
+    pass
 
-train_index=0
-vali_index=0
-train_indexes=[0,0,0]
-def data_generator(is_training,file_lists,y,is_balanced):
-    if is_balanced:
-        pass
-    else:
-        global train_index
-        global vali_index
-        while(1):
-            if is_training == True:
-                if train_index + batch_size > len(file_lists):
-                    train_index = 0
-                train_index += batch_size
-                index=train_index
-            else:
-                if vali_index + batch_size > len(file_lists):
-                    vali_index = 0
-                vali_index += batch_size
-                index=vali_index
-        
-            file_list = file_lists[index-batch_size:index]
-            label_list = y[index-batch_size:index]
-            output = np.zeros([batch_size, height,width, 3])
-            for i in range(batch_size):
-                output[i]=preprocessing_augment(Image.open(file_list[i]),label_list[i])
-            yield output, label_list
+if __name__=="__main__":
+    import argparse
+    parser=argparse.ArgumentParser(description="CNN on TB")
+    parser.add_argument('--train',action='store_true',help='Training mode')
+    parser.add_argument('--test',action='store_true',help='Testing mode')
+    parser.add_argument('--dev',action='store_true',help='Dev mode')
+    parser.add_argument('-m','--model',type=str,help='The model you want to test on')
+    parser.add_argument('--width',type=int,default=420)
+    parser.add_argument('--height',type=int,default=131)
+    parser.add_argument('--batch',type=int,default=32,help='Batch size')
+    parser.add_argument('--epochs',type=int,default=200,help='#Epochs')
+    parser.add_argument('--balance',action='store_true',help='Balance data by undersampling the majiroty data')
+    parser.add_argument('--n_lables',type=int,default=3)
+    args=parser.parse_args()
+    config_environment()
+    if args.train:
+        print("Training mode")
+        if args.balance:
+            args.batch-=(args.batch%3)
+        train(args)
 
-###################################################################################
+    if args.test:
+        print("Testing mode")
+    if args.dev:
+        print("Dev mode")
