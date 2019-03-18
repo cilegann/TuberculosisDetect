@@ -71,11 +71,14 @@ def get_model(args):
     dense_b=Dense(64,activation='relu')(dense_b)
     output_b=Dense(2,activation='softmax')(dense_b)
     def two_stage_layer(x):
-        ans=K.zeros((3))
+        ans=np.zeros((3))
+        x=K.get_value(x)
         ans[0]=x[0]
         ans[1]=x[1]*x[2]
         ans[2]=x[1]*x[3]
-        return x
+        a=K.zeors(3)
+        K.set_value(a,ans)
+        return a
     model_output=Concatenate()([output_a,output_b])
     model_output=Lambda(two_stage_layer)(model_output)
     model=Model(model_input,model_output)
