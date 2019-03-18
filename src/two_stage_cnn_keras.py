@@ -45,7 +45,7 @@ def config_environment(args):
 
 def get_model(args):
 
-    model_input=Input(shape=(None,args.height,args.width,3))
+    model_input=Input(shape=(args.height,args.width,3))
     
     cnn_a=Conv2D(32,(3,3),activation='relu',data_format='channels_last',padding='same')(model_input)
     cnn_a=Conv2D(32(3,3),activation='relu')(cnn_a)
