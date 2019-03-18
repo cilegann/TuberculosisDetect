@@ -107,8 +107,16 @@ def train(args):
     plot_confusion_matrix(y_ture,y_pred,labels)
     evaluate(y_ture,y_pred)
 
-def test():
-    pass
+def test(args):
+    model=load_model('./models/cnn_2019-03-15-15:55_best.h5')
+    x_vali_list,y_vali,_=read_x_y_mapping(mappings,basedirs,'vali',False,args)
+    x_vali=load_all_valid(x_vali_list,args)
+    y_pred=model.predict(x_vali)
+    y_pred=np.argmax(y_pred,axis=1)
+    y_ture=np.argmax(y_vali,axis=1)
+    labels=['negative','positive','polluted']
+    plot_confusion_matrix(y_ture,y_pred,labels)
+    evaluate(y_ture,y_pred)
 
 if __name__=="__main__":
     import argparse
@@ -133,5 +141,6 @@ if __name__=="__main__":
 
     if args.test:
         print("Testing mode")
+        test(args)
     if args.dev:
         print("Dev mode")
