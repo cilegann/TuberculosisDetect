@@ -45,9 +45,9 @@ def config_environment(args):
 
 def get_model(args):
 
-    model_input=Input(shape=(None,args.height,args.width,3),data_format='channels_last',padding='same')
+    model_input=Input(shape=(None,args.height,args.width,3))
     
-    cnn_a=Conv2D(32,(3,3),activation='relu')(model_input)
+    cnn_a=Conv2D(32,(3,3),activation='relu',data_format='channels_last',padding='same')(model_input)
     cnn_a=Conv2D(32(3,3),activation='relu')(cnn_a)
     cnn_a=MaxPool2D((2,2))(cnn_a)
     cnn_a=Dropout(0.25)(cnn_a)
@@ -59,7 +59,7 @@ def get_model(args):
     dense_a=Dense(64,activation='relu')(dense_a)
     output_a=Dense(2,activation='softmax')(dense_a)
     
-    cnn_b=Conv2D(32,(3,3),activation='relu')(model_input)
+    cnn_b=Conv2D(32,(3,3),activation='relu',data_format='channels_last',padding='same')(model_input)
     cnn_b=Conv2D(32(3,3),activation='relu')(cnn_b)
     cnn_b=MaxPool2D((2,2))(cnn_b)
     cnn_b=Dropout(0.25)(cnn_b)
