@@ -71,8 +71,7 @@ def get_model(args):
     dense_b=Dense(64,activation='relu')(dense_b)
     output_b=Dense(2,activation='softmax')(dense_b)
     model_output=Concatenate()([output_a,output_b])
-    print(K.shape(model_output))
-    model_output=Lambda(lambda x:(x[0],x[1]*x[2],x[1]*x[3]))(model_output)
+    model_output=Lambda(lambda x:(x[:,0],x[:,1]*x[:,2],x[:,1]*x[:,3]))(model_output)
     model=Model(model_input,model_output)
 
     model.summary()
