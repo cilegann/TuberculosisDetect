@@ -201,3 +201,8 @@ def load_all_valid(file_list,args,txt=False):
             vali_x[i],tmp= vec_reader(f)
         return vali_x
 ###################################################################################
+
+def scriptBackuper(scriptName,nowtime):
+    from shutil import copyfile
+    newscriptName=(scriptName[:scriptName.rfind('.')]+"_"+nowtime+".py")
+    copyfile('./src/'+scriptName,'./src/'+newscriptName)
