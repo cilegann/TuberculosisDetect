@@ -4,6 +4,7 @@ from keras import utils as np_utils
 import numpy as np
 import cv2
 from PIL import Image
+
 def create_x_y_mapping(mappings,basedirs,train_or_vali,txt=False):
     train_mapping_file=mappings[0]
     vali_mapping_file=mappings[1]
@@ -37,7 +38,7 @@ def create_x_y_mapping(mappings,basedirs,train_or_vali,txt=False):
                             if( ('jpg' in pathName) or ('png' in pathName) ):
                                 f.write(pathName+','+str(i)+'\n')
                     
-def read_x_y_mapping(mappings,basedirs,train_or_vali,shuffle,args):
+def read_x_y_mapping(mappings,basedirs,train_or_vali,shuffle,args,txt=False):
     train_mapping_file=mappings[0]
     vali_mapping_file=mappings[1]
     file_list=[]
@@ -47,7 +48,7 @@ def read_x_y_mapping(mappings,basedirs,train_or_vali,shuffle,args):
     else:
         mapping_file=vali_mapping_file
     if(not os.path.exists(mapping_file)):
-        create_x_y_mapping(mappings,basedirs,train_or_vali)
+        create_x_y_mapping(mappings,basedirs,train_or_vali,txt=txt)
     with open(mapping_file,'r') as f:
         next(f)
         lines=f.readlines()
@@ -96,14 +97,14 @@ def yoloParser(string):
 def vec_reader(path):
     with open(path,'r') as f:
         line=f.readline()
-    return parser(line)
+    return yoloParser(line)
 
 ###################################################################################
 
 train_index=0
 vali_index=0
 train_indexes=[-1,-1,-1]
-
+vali_indexes=[-1,-1,-1]
 def data_generator(is_training,file_lists,y,args,indexes=None,txt=False):
     is_balanced=args.balance
     batch_size=args.batch
@@ -111,12 +112,13 @@ def data_generator(is_training,file_lists,y,args,indexes=None,txt=False):
     width=args.width
     if is_balanced:
         global train_indexes
-        if train_indexes==[-1,-1,-1]:
-            train_indexes=[indexes[i][0] for i in range(3)]
+        global vali_indexes
         while(1):
+            file_list=[]
+            label_list=[]
             if is_training:
-                file_list=[]
-                label_list=[]
+                if train_indexes==[-1,-1,-1]:
+                    train_indexes=[indexes[i][0] for i in range(3)]
                 for i in range(3):
                     # flag: train_indexes[i]
                     # start: indexes[i][0]
@@ -128,24 +130,35 @@ def data_generator(is_training,file_lists,y,args,indexes=None,txt=False):
                         train_indexes[i]+=1
                         if(train_indexes[i]>indexes[i][1]):
                             train_indexes[i]=indexes[i][0]
-                
-                label_list=np.asarray(label_list)
-                c=list(zip(file_list,label_list))
-                random.shuffle(c)
-                file_list,label_list=zip(*c)
-                if not txt:
-                    output = np.zeros([batch_size, height,width, 3])
-                    for i in range(batch_size):
-                        output[i]=preprocessing_augment(Image.open(file_list[i]),label_list[i],args)
-                else:
-                    output = np.zeros([batch_size, args.vector_length])
-                    for i in range(batch_size):
-                        output[i],tmp=vec_reader(file_list[i])
-                
-                yield output, np.asarray(label_list)
+            else:
+                if vali_indexes==[-1,-1,-1]:
+                    vali_indexes=[indexes[i][0] for i in range(3)]
+                for i in range(3):
+                    # flag: train_indexes[i]
+                    # start: indexes[i][0]
+                    # end: indexes[i][1]
+                    # length: indexes[i][2]
+                    for n in range(int(batch_size/3)):
+                        file_list.append(file_lists[ vali_indexes[i] ])
+                        label_list.append(y[ vali_indexes[i] ])
+                        vali_indexes[i]+=1
+                        if(vali_indexes[i]>indexes[i][1]):
+                            vali_indexes[i]=indexes[i][0]
+            label_list=np.asarray(label_list)
+            c=list(zip(file_list,label_list))
+            random.shuffle(c)
+            file_list,label_list=zip(*c)
+            if not txt:
+                output = np.zeros([batch_size, height,width, 3])
+                for i in range(batch_size):
+                    output[i]=preprocessing_augment(Image.open(file_list[i]),label_list[i],args)
+            else:
+                output = np.zeros([batch_size, args.vector_length])
+                for i in range(batch_size):
+                    output[i],tmp=vec_reader(file_list[i])
+            yield output, np.asarray(label_list)
             
     else:
-        #TODO : FIX
         global train_index
         global vali_index
         while(1):
@@ -162,9 +175,14 @@ def data_generator(is_training,file_lists,y,args,indexes=None,txt=False):
         
             file_list = file_lists[index-batch_size:index]
             label_list = y[index-batch_size:index]
-            output = np.zeros([batch_size, height,width, 3])
-            for i in range(batch_size):
-                output[i]=preprocessing_augment(Image.open(file_list[i]),label_list[i],args)
+            if not txt:
+                output = np.zeros([batch_size, height,width, 3])
+                for i in range(batch_size):
+                    output[i]=preprocessing_augment(Image.open(file_list[i]),label_list[i],args)
+            else:
+                output = np.zeros([batch_size, args.vector_length])
+                for i in range(batch_size):
+                    output[i],tmp=vec_reader(file_list[i])
             yield output, label_list
 
 ###################################################################################
@@ -178,9 +196,8 @@ def load_all_valid(file_list,args,txt=False):
         x_vali/=255.
         return x_vali
     else:
-        global vali_x
-        vali_x = np.zeros([len(vali_x_file_list), args.vector_length])
-        for i,f in enumerate(vali_x_file_list):
+        vali_x = np.zeros([len(file_list), args.vector_length])
+        for i,f in enumerate(file_list):
             vali_x[i],tmp= vec_reader(f)
-
+        return vali_x
 ###################################################################################
