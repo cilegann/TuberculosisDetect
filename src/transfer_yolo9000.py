@@ -68,111 +68,16 @@ elif(host=='cilegann-PC'):
 
 train_mapping_file='./data/YOLO9000_x_y_mapping.csv'
 vali_mapping_file='./data/YOLO9000_vali_x_y_mapping.csv'
-
+mapping_files=[train_mapping_file,vali_mapping_file]
 polluted_train_basedir='./data/polluted'
 positive_train_basedir='./data/positive'
 negative_train_basedir='./data/negative'
 polluted_vali_basedir='./data/vali/polluted'
 positive_vali_basedir='./data/vali/positive'
 negative_vali_basedir='./data/vali/negative'
+basedirs=[polluted_train_basedir,positive_train_basedir,negative_train_basedir,polluted_vali_basedir,positive_vali_basedir,negative_vali_basedir]
 
-index = 0
-vali_index = 0
 
-train_x_file_list = []
-train_x = []
-train_y = []
-train_start_index=[-1,-1,-1]
-train_end_index=[-1,-1,-1]
-train_len=[-1,-1,-1]
-
-vali_x_file_list = []
-vali_x=[]
-vali_y = []
-prob_y=[]
-vali_start_index=[-1,-1,-1]
-vali_end_index=[-1,-1,-1]
-vali_len=[-1,-1,-1]
-
-###################################################################################
-
-def create_x_y_mapping(train_or_vali):
-    basedir_list=[]
-    if(train_or_vali=='train'):
-        mapping_file=train_mapping_file
-        basedir_list=[negative_train_basedir,positive_train_basedir,polluted_train_basedir]
-    else:
-        mapping_file=vali_mapping_file
-        basedir_list=[negative_vali_basedir,positive_vali_basedir,polluted_vali_basedir]
-    with open(mapping_file,'w') as f:
-        f.write("file_path,label\n")
-        for i,b in enumerate(basedir_list):
-            for root, directs,filenames in os.walk(b):
-                for filename in filenames:
-                    if 'txt' in filename:
-                        pathName=os.path.join(root,filename)
-                        if( ('jpg' in pathName) or ('png' in pathName) ):
-                            f.write(pathName+','+str(i)+'\n')
-
-###################################################################################
-
-def read_x_y_mapping(train_or_vali,shuffle):
-    if(train_or_vali=='train'):
-        global train_x_file_list
-        global train_y
-        global train_start_index
-        global train_end_index
-        global train_len
-        file_list=[]
-        y=[]
-        mapping_file=train_mapping_file
-    else:
-        global vali_x_file_list
-        global vali_y
-        global vali_start_index
-        global vali_end_index
-        global vali_len
-        file_list=[]
-        y=[]
-        mapping_file=vali_mapping_file
-    if(not os.path.exists(mapping_file)):
-        create_x_y_mapping(train_or_vali)
-    with open(mapping_file,'r') as f:
-        next(f)
-        lines=f.readlines()
-        for line in lines:
-            file_list.append(line.split(',')[0])
-            y.append(line.split(',')[1][:-1])
-    if(shuffle):
-        c=list(zip(file_list,y))
-        random.shuffle(c)
-        file_list,y=zip(*c)
-    else:
-        s0=y.index('0')
-        s1=y.index('1')
-        s2=y.index('2')
-        e0=s1-1
-        e1=s2-1
-        e2=len(y)-1
-        l0=e0-s0+1
-        l1=e1-s1+1
-        l2=e2-s2+1
-    if(train_or_vali=='train'):
-        train_x_file_list=file_list
-        train_y=np_utils.to_categorical(np.array(y),3)
-        if not shuffle:
-            train_start_index=[s0,s1,s2]
-            train_end_index=[e0,e1,e2]
-            train_len=[l0,l1,l2]
-    else:
-        vali_x_file_list=file_list
-        vali_y=np_utils.to_categorical(np.array(y),3)
-        if not shuffle:
-            vali_start_index=[s0,s1,s2]
-            vali_end_index=[e0,e1,e2]
-            vali_len=[l0,l1,l2]
-
-###################################################################################
 
 def parser(string):
     fn=string.split(",")[0]
@@ -199,21 +104,6 @@ def load_all_valid():
     for i,f in enumerate(vali_x_file_list):
         vali_x[i],tmp= vec_reader(f)
 
-    #TODO normailize??
-
-###################################################################################
-
-def generate_valid_from_train():
-    global train_x_file_list
-    global train_y
-    global vali_x_file_list
-    global vali_y
-    vali_x_file_list = train_x_file_list[ :math.ceil(len(train_x_file_list)*vali_split) ]
-    vali_y = train_y [ :math.ceil(len(train_x_file_list)*vali_split) ]
-    train_x_file_list = train_x_file_list [math.floor(len(train_x_file_list)*vali_split):]
-    train_y = train_y [math.floor(len(train_x_file_list)*vali_split):]
-
-###################################################################################
 
 def data_generator(is_training):
     global index
