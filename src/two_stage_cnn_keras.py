@@ -23,8 +23,8 @@ width=420
 height=131
 num_of_classes=3
 batch_size=32
-train_mapping_file='./data/cnn_x_y_mapping.csv'
-vali_mapping_file='./data/cnn_vali_x_y_mapping.csv'
+train_mapping_file='./data/CNN_x_y_mapping.csv'
+vali_mapping_file='./data/CNN_vali_x_y_mapping.csv'
 mappings=[train_mapping_file,vali_mapping_file]
 
 polluted_train_basedir='./data/polluted'
@@ -48,32 +48,28 @@ def get_model(args):
     model_input=Input(shape=(args.height,args.width,3))
     
     cnn_a=Conv2D(32,(3,3),activation='relu',data_format='channels_last',padding='same')(model_input)
-    cnn_a=Conv2D(32,(3,3),activation='relu')(cnn_a)
     cnn_a=MaxPool2D((2,2))(cnn_a)
     cnn_a=Dropout(0.25)(cnn_a)
-    cnn_a=Conv2D(64,(3,3),activation='relu')(cnn_a)
-    cnn_a=Conv2D(64,(3,3),activation='relu')(cnn_a)
-    cnn_a=Dropout(0.25)(MaxPool2D((2,2))(cnn_a))
+    # cnn_a=Conv2D(64,(3,3),activation='relu')(cnn_a)
+    # cnn_a=Dropout(0.25)(MaxPool2D((2,2))(cnn_a))
     dense_a=Flatten()(cnn_a)
-    dense_a=Dropout(0.5)(Dense(128,activation='relu')(dense_a))
-    dense_a=Dense(64,activation='relu')(dense_a)
+    dense_a=Dropout(0.5)(Dense(64,activation='relu')(dense_a))
+    dense_a=Dense(32,activation='relu')(dense_a)
     output_a=Dense(2,activation='softmax')(dense_a)
     
     cnn_b=Conv2D(32,(3,3),activation='relu',data_format='channels_last',padding='same')(model_input)
-    cnn_b=Conv2D(32,(3,3),activation='relu')(cnn_b)
     cnn_b=MaxPool2D((2,2))(cnn_b)
     cnn_b=Dropout(0.25)(cnn_b)
-    cnn_b=Conv2D(64,(3,3),activation='relu')(cnn_b)
-    cnn_b=Conv2D(64,(3,3),activation='relu')(cnn_b)
-    cnn_b=Dropout(0.25)(MaxPool2D((2,2))(cnn_b))
+    # cnn_b=Conv2D(64,(3,3),activation='relu')(cnn_b)
+    # cnn_b=Dropout(0.25)(MaxPool2D((2,2))(cnn_b))
     dense_b=Flatten()(cnn_b)
-    dense_b=Dropout(0.5)(Dense(128,activation='relu')(dense_b))
-    dense_b=Dense(64,activation='relu')(dense_b)
+    dense_b=Dropout(0.5)(Dense(64,activation='relu')(dense_b))
+    dense_b=Dense(32,activation='relu')(dense_b)
     output_b=Dense(2,activation='softmax')(dense_b)
     model_output=Concatenate()([output_a,output_b])
     def two_stage_classifier(x):
         a1,a2,b1,b2=Lambda(lambda tensor: tf.split(tensor,4,1))(x)
-        return K.concatenate([a1,multiply([a2,b1]),multiply([a2,b2])])
+        return K.concatenate([multiply([a2,b1]),multiply([a2,b2]),a1])
     model_output=Lambda(two_stage_classifier)(model_output)
     model=Model(model_input,model_output)
 
@@ -100,9 +96,11 @@ def train(args):
         data_generator(True,x_train_list,y_train,args,indexes),
         validation_data=(x_vali,y_vali),
         validation_steps=1,
-        steps_per_epoch=(46),
+        #steps_per_epoch=(46),
+        steps_per_epoch=int(len(x_train_list))//int(batch_size),
         epochs=args.epochs,
-        callbacks=[cblog,cbtb,cbckpt,cbes]
+        callbacks=[cblog,cbtb,cbckpt,cbes],
+        class_weight=[1,33,16]
     )
     model.save('./models/tscnnKeras_'+nowtime+'.h5')
     model.save_weights('./models/tscnnKeras_'+nowtime+'_weight.h5')

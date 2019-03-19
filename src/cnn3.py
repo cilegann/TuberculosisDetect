@@ -46,22 +46,15 @@ def get_model(args):
     model=Sequential()
     model.add(Conv2D(32,(3,3),input_shape=(args.height,args.width,3),data_format='channels_last',padding='same'))
     model.add(Activation('relu'))
-    model.add(Conv2D(32,(3,3)))
-    model.add(Activation('relu'))
     model.add(MaxPool2D(pool_size=(2,2)))
     model.add(Dropout(0.25))
 
     model.add(Conv2D(64,(3,3),padding='same'))
     model.add(Activation('relu'))
-    model.add(Conv2D(64,(3,3)))
-    model.add(Activation('relu'))
     model.add(MaxPool2D(pool_size=(2,2)))
     model.add(Dropout(0.25))
 
     model.add(Flatten())
-    model.add(Dense(128))
-    model.add(Activation('relu'))
-    model.add(Dropout(0.5))
     model.add(Dense(64))
     model.add(Activation('relu'))
     model.add(Dense(args.n_labels))
@@ -92,7 +85,8 @@ def train(args):
         validation_steps=1,
         steps_per_epoch=(46),
         epochs=args.epochs,
-        callbacks=[cblog,cbtb,cbckpt,cbes]
+        callbacks=[cblog,cbtb,cbckpt,cbes],
+        class_weight=[1,33,16]
     )
     model.save('./models/cnn_'+nowtime+'.h5')
     model.save_weights('./models/cnn_'+nowtime+'_weight.h5')
@@ -108,7 +102,7 @@ def train(args):
     evaluate(y_ture,y_pred)
 
 def test(args):
-    model=load_model('./models/cnn_2019-03-15-15:55_best.h5')
+    model=load_model(args.model)
     x_vali_list,y_vali,_=read_x_y_mapping(mappings,basedirs,'vali',False,args)
     x_vali=load_all_valid(x_vali_list,args)
     y_pred=model.predict(x_vali)
