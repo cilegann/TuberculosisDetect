@@ -11,7 +11,7 @@ from keras import utils as np_utils
 from keras.layers import *
 from keras.models import Model,load_model,model_from_json
 from keras import backend as K
-from keras.callbacks import CSVLogger,EarlyStopping,ModelCheckpoint,TensorBoard
+from keras.callbacks import CSVLogger,EarlyStopping,ModelCheckpoint,TensorBoard,ReduceLROnPlateau
 from keras.optimizers import Adam
 from Capsule_Keras import *
 from evaluate_tools import plot_confusion_matrix,evaluate
@@ -47,7 +47,6 @@ def get_model(args):
     model.add(Conv2D(32,(3,3),input_shape=(args.height,args.width,3),data_format='channels_last',padding='same'))
     model.add(Activation('relu'))
     model.add(MaxPool2D(pool_size=(2,2)))
-    model.add(Dropout(0.25))
 
     model.add(Conv2D(64,(3,3),padding='same'))
     model.add(Activation('relu'))
@@ -70,11 +69,15 @@ def train(args):
     if not os.path.exists('./log'):
         os.mkdir('./log')
     nowtime=time.strftime("%Y-%m-%d-%H:%M", time.localtime())
+    print("######### TRAINING FILE POSTFIX #########")
+    print(" "*13,nowtime)
+    print("#########################################")
+    scriptBackuper(os.path.basename(__file__),nowtime)
     cblog = CSVLogger('./log/cnn_'+nowtime+'.csv')
     cbtb = TensorBoard(log_dir='./Graph',batch_size=args.batch)
     cbckpt=ModelCheckpoint('./models/cnn_'+nowtime+'_best.h5',monitor='val_loss',save_best_only=True)
     cbes=EarlyStopping(monitor='val_loss', patience=10, verbose=0, mode='auto')
-    
+    cbrlr=ReduceLROnPlateau()
     x_train_list,y_train,indexes=read_x_y_mapping(mappings,basedirs,'train',False,args)
     x_vali_list,y_vali,_=read_x_y_mapping(mappings,basedirs,'vali',False,args)
     x_vali=load_all_valid(x_vali_list,args)
@@ -83,9 +86,9 @@ def train(args):
         data_generator(True,x_train_list,y_train,args,indexes),
         validation_data=(x_vali,y_vali),
         validation_steps=1,
-        steps_per_epoch=(46),
+        steps_per_epoch=(15),
         epochs=args.epochs,
-        callbacks=[cblog,cbtb,cbckpt,cbes],
+        callbacks=[cblog,cbtb,cbckpt,cbrlr],
         class_weight=[1,33,16]
     )
     model.save('./models/cnn_'+nowtime+'.h5')

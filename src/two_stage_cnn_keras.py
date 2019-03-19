@@ -12,7 +12,7 @@ from keras.layers import *
 from keras.layers.core import Lambda
 from keras.models import Model,load_model,model_from_json
 from keras import backend as K
-from keras.callbacks import CSVLogger,EarlyStopping,ModelCheckpoint,TensorBoard
+from keras.callbacks import CSVLogger,EarlyStopping,ModelCheckpoint,TensorBoard,ReduceLROnPlateau
 from keras.optimizers import Adam
 from Capsule_Keras import *
 from evaluate_tools import plot_confusion_matrix,evaluate
@@ -57,7 +57,6 @@ def get_model(args):
     
     cnn_b=Conv2D(32,(3,3),activation='relu',data_format='channels_last',padding='same')(model_input)
     cnn_b=MaxPool2D((2,2))(cnn_b)
-    cnn_b=Dropout(0.25)(cnn_b)
     cnn_b=Conv2D(64,(3,3),activation='relu')(cnn_b)
     cnn_b=Dropout(0.25)(MaxPool2D((2,2))(cnn_b))
     dense_b=Flatten()(cnn_b)
@@ -66,7 +65,7 @@ def get_model(args):
     model_output=Concatenate()([output_a,output_b])
     def two_stage_classifier(x):
         a1,a2,b1,b2=Lambda(lambda tensor: tf.split(tensor,4,1))(x)
-        return K.concatenate([multiply([a2,b1]),multiply([a2,b2]),a1])
+        return K.concatenate([multiply([a1,b2]),multiply([a1,b1]),a2])
     model_output=Lambda(two_stage_classifier)(model_output)
     model=Model(model_input,model_output)
 
@@ -80,11 +79,15 @@ def train(args):
     if not os.path.exists('./log'):
         os.mkdir('./log')
     nowtime=time.strftime("%Y-%m-%d-%H:%M", time.localtime())
+    print("######### TRAINING FILE POSTFIX #########")
+    print(" "*13,nowtime)
+    print("#########################################")
+    scriptBackuper(os.path.basename(__file__),nowtime)
     cblog = CSVLogger('./log/tscnnKeras_'+nowtime+'.csv')
     cbtb = TensorBoard(log_dir='./Graph',batch_size=args.batch)
     cbckpt=ModelCheckpoint('./models/tscnnKeras_'+nowtime+'_best.h5',monitor='val_loss',save_best_only=True)
     cbes=EarlyStopping(monitor='val_loss', patience=10, verbose=0, mode='auto')
-    
+    cbrlr=ReduceLROnPlateau()
     x_train_list,y_train,indexes=read_x_y_mapping(mappings,basedirs,'train',False,args)
     x_vali_list,y_vali,_=read_x_y_mapping(mappings,basedirs,'vali',False,args)
     x_vali=load_all_valid(x_vali_list,args)
@@ -96,7 +99,7 @@ def train(args):
         #steps_per_epoch=(46),
         steps_per_epoch=int(len(x_train_list))//int(batch_size),
         epochs=args.epochs,
-        callbacks=[cblog,cbtb,cbckpt,cbes],
+        callbacks=[cblog,cbtb,cbckpt,cbrlr],
         class_weight=[1,33,16]
     )
     model.save('./models/tscnnKeras_'+nowtime+'.h5')
@@ -114,6 +117,9 @@ def train(args):
 
 def test():
     pass
+
+def dev(args):
+    model=get_model(args)
 
 if __name__=="__main__":
     import argparse
