@@ -81,13 +81,30 @@ def preprocessing_augment(data,label,args):
     data/=255.
     return data
 
+def yoloParser(string):
+    fn=string.split(",")[0]
+    if "negative" in fn:
+        y=0
+    elif "positive" in fn:
+        y=1
+    elif "polluted" in fn:
+        y=2
+    vector=np.asarray( list(map(float,string.split(",")[1].split(" "))) )
+    label=np_utils.to_categorical(y,3)
+    return vector,label
+
+def vec_reader(path):
+    with open(path,'r') as f:
+        line=f.readline()
+    return parser(line)
+
 ###################################################################################
 
 train_index=0
 vali_index=0
 train_indexes=[-1,-1,-1]
 
-def data_generator(is_training,file_lists,y,args,indexes=None):
+def data_generator(is_training,file_lists,y,args,indexes=None,txt=False):
     is_balanced=args.balance
     batch_size=args.batch
     height=args.height
@@ -111,18 +128,24 @@ def data_generator(is_training,file_lists,y,args,indexes=None):
                         train_indexes[i]+=1
                         if(train_indexes[i]>indexes[i][1]):
                             train_indexes[i]=indexes[i][0]
+                
                 label_list=np.asarray(label_list)
                 c=list(zip(file_list,label_list))
                 random.shuffle(c)
                 file_list,label_list=zip(*c)
-                
-                output = np.zeros([batch_size, height,width, 3])
-                for i in range(batch_size):
-                    output[i]=preprocessing_augment(Image.open(file_list[i]),label_list[i],args)
+                if not txt:
+                    output = np.zeros([batch_size, height,width, 3])
+                    for i in range(batch_size):
+                        output[i]=preprocessing_augment(Image.open(file_list[i]),label_list[i],args)
+                else:
+                    output = np.zeros([batch_size, args.vector_length])
+                    for i in range(batch_size):
+                        output[i],tmp=vec_reader(file_list[i])
                 
                 yield output, np.asarray(label_list)
             
     else:
+        #TODO : FIX
         global train_index
         global vali_index
         while(1):
@@ -156,7 +179,7 @@ def load_all_valid(file_list,args,txt=False):
         return x_vali
     else:
         global vali_x
-        vali_x = np.zeros([len(vali_x_file_list), 173056])
+        vali_x = np.zeros([len(vali_x_file_list), args.vector_length])
         for i,f in enumerate(vali_x_file_list):
             vali_x[i],tmp= vec_reader(f)
 
