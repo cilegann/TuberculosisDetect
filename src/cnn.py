@@ -54,7 +54,7 @@ def get_model(args):
     model.add(Dropout(0.25))
 
     model.add(Flatten())
-    model.add(Dense(64))
+    model.add(Dense(512))
     model.add(Activation('relu'))
     model.add(Dense(args.n_labels))
     model.add(Activation('softmax'))
