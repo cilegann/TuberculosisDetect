@@ -4,7 +4,7 @@ modelDir='./models'
 logDir='./log'
 srcDir='./src'
 purgeList=[]
-print()
+print("\n\n")
 print('     _.--""--._')
 print('    /  _    _  \ ')
 print(' _  ( (_\  /_) )  _')

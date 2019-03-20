@@ -92,28 +92,31 @@ def train(args):
     x_vali_list,y_vali,_=read_x_y_mapping(mappings,basedirs,'vali',False,args)
     x_vali=load_all_valid(x_vali_list,args)
     
-    model.fit_generator(
-        data_generator(True,x_train_list,y_train,args,indexes),
-        validation_data=(x_vali,y_vali),
-        validation_steps=1,
-        #steps_per_epoch=(46),
-        steps_per_epoch=int(len(x_train_list))//int(batch_size),
-        epochs=args.epochs,
-        callbacks=[cblog,cbtb,cbckpt,cbrlr],
-        class_weight=[1,33,16]
-    )
-    model.save('./models/tscnnKeras_'+nowtime+'.h5')
-    model.save_weights('./models/tscnnKeras_'+nowtime+'_weight.h5')
-    jst=model.to_json()
-    with open('./models/tscnnKeras_'+nowtime+'_json.h5','w') as file:
-        file.write(jst)
-    
-    y_pred=model.predict(x_vali)
-    y_pred=np.argmax(y_pred,axis=1)
-    y_ture=np.argmax(y_vali,axis=1)
-    labels=['negative','positive','polluted']
-    plot_confusion_matrix(y_ture,y_pred,labels)
-    evaluate(y_ture,y_pred)
+    try:
+        model.fit_generator(
+            data_generator(True,x_train_list,y_train,args,indexes),
+            validation_data=(x_vali,y_vali),
+            validation_steps=1,
+            #steps_per_epoch=(46),
+            steps_per_epoch=int(len(x_train_list))//int(batch_size),
+            epochs=args.epochs,
+            callbacks=[cblog,cbtb,cbckpt,cbrlr],
+            class_weight=[1,33,16]
+        )
+        model.save('./models/tscnnKeras_'+nowtime+'.h5')
+        model.save_weights('./models/tscnnKeras_'+nowtime+'_weight.h5')
+        jst=model.to_json()
+        with open('./models/tscnnKeras_'+nowtime+'_json.h5','w') as file:
+            file.write(jst)
+        
+        y_pred=model.predict(x_vali)
+        y_pred=np.argmax(y_pred,axis=1)
+        y_ture=np.argmax(y_vali,axis=1)
+        labels=['negative','positive','polluted']
+        plot_confusion_matrix(y_ture,y_pred,labels)
+        evaluate(y_ture,y_pred)
+    except KeyboardInterrupt:
+        os.system("sh purge.sh "+nowtime)
 
 def test():
     pass
