@@ -5,6 +5,7 @@
 *.png
 *.psd
 models/
+saved_do_not_del_models/
 data/
 saliency_map/
 Graph/
