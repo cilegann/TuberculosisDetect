@@ -9,6 +9,7 @@ from PIL import Image
 from keras import *
 from keras import utils as np_utils
 from keras.layers import *
+from keras.layers import multiply
 from keras.layers.core import Lambda
 from keras.models import Model,load_model,model_from_json
 from keras import backend as K
@@ -67,6 +68,8 @@ def get_model(args):
 
     model_output=Concatenate()([output_a,output_b])
     def two_stage_classifier(x):
+        import tensorflow as tf
+        from keras.layers import multiply
         a1,a2,b1,b2=Lambda(lambda tensor: tf.split(tensor,4,1))(x)
         return K.concatenate([multiply([a1,b2]),multiply([a1,b1]),a2])
     model_output=Lambda(two_stage_classifier)(model_output)
@@ -87,9 +90,13 @@ def train(args):
     print(" "*13,nowtime.replace("-","").replace(":",""))
     print("#########################################")
     scriptBackuper(os.path.basename(__file__),nowtime)
+    jst=model.to_json()
+    with open('./models/tscnnKeras_'+nowtime+'.json','w') as file:
+        file.write(jst)
     cblog = CSVLogger('./log/tscnnKeras_'+nowtime+'.csv')
     cbtb = TensorBoard(log_dir=('./Graph/'+"tscnnKeras_"+nowtime.replace("-","").replace(":","")),batch_size=args.batch)
     cbckpt=ModelCheckpoint('./models/tscnnKeras_'+nowtime+'_best.h5',monitor='val_loss',save_best_only=True)
+    cbckptw=ModelCheckpoint('./models/tscnnKeras_'+nowtime+'_best_weight.h5',monitor='val_loss',save_best_only=True,save_weights_only=True)
     cbes=EarlyStopping(monitor='val_loss', patience=10, verbose=0, mode='auto')
     cbrlr=ReduceLROnPlateau()
     x_train_list,y_train,indexes=read_x_y_mapping(mappings,basedirs,'train',not args.balance,args)
@@ -105,14 +112,11 @@ def train(args):
             #steps_per_epoch=min(np.asarray([indexes[i][2] for i in range(3)]))//args.batch,
             #steps_per_epoch=int(len(x_train_list))//int(batch_size),
             epochs=args.epochs,
-            callbacks=[cblog,cbtb,cbckpt],
+            callbacks=[cblog,cbtb,cbckpt,cbckptw],
             class_weight=([0.092,0.96,0.94] if not args.balance else [1,1,1])
         )
         model.save('./models/tscnnKeras_'+nowtime+'.h5')
         model.save_weights('./models/tscnnKeras_'+nowtime+'_weight.h5')
-        jst=model.to_json()
-        with open('./models/tscnnKeras_'+nowtime+'_json.h5','w') as file:
-            file.write(jst)
         
         y_pred=model.predict(x_vali)
         y_pred=np.argmax(y_pred,axis=1)
@@ -160,5 +164,6 @@ if __name__=="__main__":
 
     if args.test:
         print("Testing mode")
+        test(args)
     if args.dev:
         print("Dev mode")

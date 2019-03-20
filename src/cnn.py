@@ -76,6 +76,9 @@ def train(args):
     print(" "*13,nowtime)
     print("#########################################")
     scriptBackuper(os.path.basename(__file__),nowtime)
+    jst=model.to_json()
+    with open('./models/cnn_'+nowtime+'_json.json','w') as file:
+        file.write(jst)
     cblog = CSVLogger('./log/cnn_'+nowtime+'.csv')
     cbtb = TensorBoard(log_dir='./Graph',batch_size=args.batch)
     cbckpt=ModelCheckpoint('./models/cnn_'+nowtime+'_best.h5',monitor='val_loss',save_best_only=True)
@@ -98,9 +101,6 @@ def train(args):
         )
         model.save('./models/cnn_'+nowtime+'.h5')
         model.save_weights('./models/cnn_'+nowtime+'_weight.h5')
-        jst=model.to_json()
-        with open('./models/cnn_'+nowtime+'_json.h5','w') as file:
-            file.write(jst)
         
         y_pred=model.predict(x_vali)
         y_pred=np.argmax(y_pred,axis=1)
