@@ -44,7 +44,7 @@ def config_environment(args):
 
 def get_model(args):
     model=Sequential()
-    model.add(Conv2D(32,(3,3),input_shape=(args.height,args.width,3),data_format='channels_last',padding='same'))
+    model.add(Conv2D(32,(5,5),input_shape=(args.height,args.width,3),data_format='channels_last',padding='same'))
     model.add(Activation('relu'))
     model.add(MaxPool2D(pool_size=(2,2)))
 
