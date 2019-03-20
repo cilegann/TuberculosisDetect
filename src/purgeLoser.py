@@ -1,21 +1,21 @@
 import os
 import sys
 import shutil
+from art import *
 modelDir='./models'
 logDir='./log'
 srcDir='./src'
 graphDir='./Graph'
 purgeList=[]
-print("\n\n")
-print('     _.--""--._')
-print('    /  _    _  \ ')
-print(' _  ( (_\  /_) )  _')
-print('{ \._\   /\   /_./ }')
-print('/_"=-.}______{.-="_\ ')
-print(' _  _.=("""")=._  _')
-print('(_\'"_.-"`~~`"-._"\'_)')
-print(' {_"            "_}')
-print("    LOSER PURGER\n")
+tprint("Purge Loser")
+print(" "*10+'                _.--""--._')
+print(" "*10+'               /  _    _  \ ')
+print(" "*10+'            _  ( (_\  /_) )  _')
+print(" "*10+'           { \._\   /\   /_./ }')
+print(" "*10+'           /_"=-.}______{.-="_\ ')
+print(" "*10+'            _  _.=("""")=._  _')
+print(" "*10+'           (_\'"_.-"`~~`"-._"\'_)')
+print(" "*10+'            {_"            "_}\n')
 for d in [modelDir,logDir,srcDir]:
     for r,ds,fs in os.walk(d):
         for f in fs:
@@ -29,6 +29,7 @@ for d in [modelDir,logDir,srcDir]:
                 print(os.path.join(r,f))
 for r,ds,fs in os.walk(graphDir):
     for d in ds:
+        ok=False
         for a in sys.argv[1:]:
             if a.replace("-","").replace(":","") in d:
                 ok=True

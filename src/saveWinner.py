@@ -15,6 +15,23 @@ print(" __     __               _                      _   _ _  \n\
                                   __/ |                   \n\
                                  |___/                    \n\
 ")
+print("                    _______________ \n\
+                   |@@@@|     |####|\n\
+                   |@@@@|     |####|\n\
+                   |@@@@|     |####|\n\
+                   \@@@@|     |####/\n\
+                    \@@@|     |###/\n\
+                     `@@|_____|##'\n\
+                          (O)\n\
+                       .-'''''-.\n\
+                     .'  * * *  `.\n\
+                    :  *       *  :\n\
+                   : ~ WELL DONE ~ :\n\
+                   : ~  SAVE IT  ~ :\n\
+                    :  *       *  :\n\
+                     `.  * * *  .'\n\
+                       `-.....-'\n\
+")
 for d,s in zip([modelDir,srcDir],[modelSaveDir,srcSaveDir]):
     for r,ds,fs in os.walk(d):
         for f in fs:
