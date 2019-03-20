@@ -89,7 +89,9 @@ def train(args):
             data_generator(True,x_train_list,y_train,args,indexes),
             validation_data=(x_vali,y_vali),
             validation_steps=1,
-            steps_per_epoch=(15),
+            steps_per_epoch=(46),
+            #steps_per_epoch=min(np.asarray([indexes[i][2] for i in range(3)]))//args.batch,
+            #steps_per_epoch=int(len(x_train_list))//int(batch_size),
             epochs=args.epochs,
             callbacks=[cblog,cbtb,cbckpt],
             class_weight=([0.092,0.96,0.94] if not args.balance else [1,1,1])
@@ -121,7 +123,7 @@ def train_on_positive(args):
     print("#########################################")
     scriptBackuper(os.path.basename(__file__),nowtime)
     cblog = CSVLogger('./log/cnn_'+nowtime+'.csv')
-    cbtb = TensorBoard(log_dir='./Graph',batch_size=args.batch)
+    cbtb = TensorBoard(log_dir=('./Graph/'+"cnn_"+nowtime),batch_size=args.batch)
     cbckpt=ModelCheckpoint('./models/cnn_'+nowtime+'_best.h5',monitor='val_loss',save_best_only=True)
     cbes=EarlyStopping(monitor='val_loss', patience=10, verbose=0, mode='auto')
     cbrlr=ReduceLROnPlateau()
