@@ -22,8 +22,6 @@ import numpy as np
 from utils import *
 from evaluate_tools import cam,plot_confusion_matrix,evaluate
 
-
-vector_length=173056
 train_mapping_file='./data/YOLO9000_x_y_mapping.csv'
 vali_mapping_file='./data/YOLO9000_vali_x_y_mapping.csv'
 mapping_files=[train_mapping_file,vali_mapping_file]
@@ -46,6 +44,7 @@ def get_model(args):
     input_layer=Input(shape=(args.vector_length,))
     hidden=Dropout(0.25)(input_layer)
     hidden=Dense(32,activation='relu')(hidden)
+    hidden=BatchNormalization()(hidden)
     output=Dense(args.n_labels,activation='softmax')(hidden)
     model=Model(input_layer,output)
     return model
@@ -73,22 +72,22 @@ def training(model):
     cbes=EarlyStopping(monitor='val_loss', patience=10, verbose=0, mode='auto')
     cbrlr=ReduceLROnPlateau()
     x_train_list,y_train,indexes=read_x_y_mapping(mappings,basedirs,'train',not args.balance,args,txt=True)
-    x_vali_list,y_vali,_=read_x_y_mapping(mappings,basedirs,'vali',False,args)
-    x_vali=load_all_valid(x_vali_list,args)
+    x_vali_list,y_vali,_=read_x_y_mapping(mappings,basedirs,'vali',False,args,txt=True)
+    x_vali=load_all_valid(x_vali_list,args,txt=True)
     try:
         model.fit_generator(
-            data_generator(True,x_train_list,y_train,args,indexes),
+            data_generator(True,x_train_list,y_train,args,indexes,txt=True),
             validation_data=(x_vali,y_vali),
             validation_steps=1,
-            steps_per_epoch=(46),
-            #steps_per_epoch=min(np.asarray([indexes[i][2] for i in range(3)]))//args.batch,
+            #steps_per_epoch=(46),
+            steps_per_epoch=min(np.asarray([indexes[i][2] for i in range(3)]))//args.batch,
             #steps_per_epoch=int(len(x_train_list))//int(batch_size),
             epochs=args.epochs,
-            callbacks=[cblog,cbtb,cbckpt],
+            callbacks=[cblog,cbtb,cbckpt,cbckptw],
             class_weight=([0.092,0.96,0.94] if not args.balance else [1,1,1])
         )
-        model.save('./models/cnn_'+nowtime+'.h5')
-        model.save_weights('./models/cnn_'+nowtime+'_weight.h5')
+        model.save('./models/transfer_yolo_'+nowtime+'.h5')
+        model.save_weights('./models/transfer_yolo_'+nowtime+'_weight.h5')
         
         y_pred=model.predict(x_vali)
         y_pred=np.argmax(y_pred,axis=1)
@@ -98,96 +97,35 @@ def training(model):
         evaluate(y_ture,y_pred)
     except KeyboardInterrupt:
         os.system("sh purge.sh "+nowtime)
+def test(args):
+    pass
 
-###################################################################################
+def dev(args):
+    pass
 
-def predict():
-    global vali_x
-    global model_to_load
-    global prob_y
-    global model_to_load
-    if(model_to_load==''):
-        model_to_load='yolo9000_model_best.h5'
-    model=load_model(model_to_load)
-    model.summary()
-    read_x_y_mapping('vali',False)
-    load_all_valid()
-    loss, accuracy = model.evaluate(vali_x, vali_y)
-    print("loss: "+str(loss))
-    print("accu: "+str(accuracy))
-    prob_y = model.predict(vali_x)
-    y_true=[]
-    y_pred=[]
-    with open('result.csv','w') as file:
-        file.write("filename,real_value,pred_value\n")
-        for i,p in enumerate(vali_x_file_list):
-            file.write(p+","+str(np.argmax(vali_y[i]))+","+str(np.argmax(prob_y[i]))+'\n')
-            print(str(i)+" "+ str(np.argmax(vali_y[i])) +" -> "+str(np.argmax(prob_y[i])))
-    y_true=np.argmax(vali_y,axis=1)
-    y_pred=np.argmax(prob_y,axis=1)
-    # for y in prob_y:
-    #     if y[1]>0.33:
-    #         y_pred.append(1)
-    #     else:
-    #         y_pred.append(np.argmax(y))
-    labels=["Negative", "Positive", "Polluted"]
-    plot_confusion_matrix(y_true,y_pred,classes=labels)
-    evaluate(y_true,y_pred)
-    return y_true,y_pred
-
-        
-###################################################################################
-
-def get_model_memory_usage(batch_size, model):
-    import numpy as np
-    from keras import backend as K
-
-    shapes_mem_count = 0
-    for l in model.layers:
-        single_layer_mem = 1
-        for s in l.output_shape:
-            if s is None:
-                continue
-            single_layer_mem *= s
-        shapes_mem_count += single_layer_mem
-
-    trainable_count = np.sum([K.count_params(p) for p in set(model.trainable_weights)])
-    non_trainable_count = np.sum([K.count_params(p) for p in set(model.non_trainable_weights)])
-
-    total_memory = 4.0*batch_size*(shapes_mem_count + trainable_count + non_trainable_count)
-    gbytes = np.round(total_memory / (1024.0 ** 3), 3)
-    return gbytes
-
-def main():
-    #TODO: arg.vector_length
-    if(mode=='train'):
-        if 'balance' in os.sys.argv:
-            read_x_y_mapping('train',False)
-        else:
-            read_x_y_mapping('train',True)
-        read_x_y_mapping('vali',False)
-        load_all_valid()
-        print(np.shape(vali_x))
-        model=get_model()
-        print(get_model_memory_usage(batch_size,model))
-        training(model)
-        predict()
-    elif(mode=='predict'):
-        y_true,y_pred=predict()
-
-    elif(mode=='cam'):
-        model=load_model(model_to_load)
-        imgs=[]
-        y_true,y_pred=predict()
-        for i,img in enumerate(imgs):
-            cam(str(i)+'_'+y_pred[i],img,y_pred[i],model)
-    else:
-        read_x_y_mapping('train',False)
-        
-        print(train_start_index)
-        print(train_end_index)
-        print(train_len)
-        data_generator_balance(True)
 if __name__ == "__main__":
-    main()
+    import argparse
+    parser=argparse.ArgumentParser(description="Transfer learning on TB")
+    parser.add_argument('--train',action='store_true',help='Training mode')
+    parser.add_argument('--test',action='store_true',help='Testing mode')
+    parser.add_argument('--dev',action='store_true',help='Dev mode')
+    parser.add_argument('-m','--model',type=str,help='The model you want to test on')
+    parser.add_argument('--vector_length',type=int,default=173056)
+    parser.add_argument('--batch',type=int,default=32,help='Batch size')
+    parser.add_argument('--epochs',type=int,default=200,help='#Epochs')
+    parser.add_argument('--balance',action='store_true',help='Balance data by undersampling the majiroty data')
+    parser.add_argument('--n_labels',type=int,default=3)
+    args=parser.parse_args()
+    config_environment(args)
+    if args.train:
+        print("Training mode")
+        if args.balance:
+            args.batch-=(args.batch%3)
+        train(args)
+
+    if args.test:
+        print("Testing mode")
+        test(args)
+    if args.dev:
+        print("Dev mode")
 
