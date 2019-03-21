@@ -10,62 +10,20 @@ import keras
 import keras.backend as K
 from keras import utils as np_utils
 from keras import Sequential
-from keras.models import load_model
+from keras.models import load_model,Model
 from keras.utils import multi_gpu_model
-from keras.layers import Activation,Dense,Dropout,Flatten,LeakyReLU
-from keras.optimizers import rmsprop,adam,SGD,Adadelta
+from keras.layers import *
+from keras.optimizers import *
 import keras.losses
-from keras.layers.normalization import BatchNormalization
-from keras.callbacks import EarlyStopping,ReduceLROnPlateau,ModelCheckpoint,TensorBoard
-from keras.preprocessing.image import ImageDataGenerator
+from keras.callbacks import EarlyStopping,ReduceLROnPlateau,ModelCheckpoint,TensorBoard,CSVLogger,ReduceLROnPlateau
 import keras.backend.tensorflow_backend as KTF
 
 import numpy as np
-from PIL import Image
-import cv2
-import platform
-
+from utils import *
 from evaluate_tools import cam,plot_confusion_matrix,evaluate
-#train : python3 scriptname train
-#predict: python3 scriptname predict [modelname]
-#saliencymap: python3 scriptname cam [modelname] [dataset] [portion] [amount] [save/show]
 
-positive_weigt=15.
-polluted_weight=4.5
-negative_weight=1.4
-if 'balance' in os.sys.argv:
-    positive_weigt=1
-    polluted_weight=1
-    negative_weight=1
+
 vector_length=173056
-epoch=200 
-vali_split=0.3
-
-host = platform.node()  #cilegann-PC / ican-1080ti
-mode = os.sys.argv[1] #train / predict / saliencymap
-gpu='single'
-
-model_to_load=''
-if(mode=='predict' or mode=='cam'):
-    model_to_load=os.sys.argv[2]
-if(host=='ican-1080ti'):
-    os.environ['CUDA_VISIBLE_DEVICES'] = '1'
-    config = tf.ConfigProto()
-    config.gpu_options.allow_growth=True
-    session = tf.Session(config=config)
-    KTF.set_session(session)
-    batch_size=128
-    if('balance' in os.sys.argv):
-        batch_size=129
-elif(host=='cilegann-PC'):
-    config = tf.ConfigProto()
-    config.gpu_options.allow_growth=True
-    session = tf.Session(config=config)
-    KTF.set_session(session)
-    batch_size=64
-    if('balance' in os.sys.argv):
-        batch_size=66
-
 train_mapping_file='./data/YOLO9000_x_y_mapping.csv'
 vali_mapping_file='./data/YOLO9000_vali_x_y_mapping.csv'
 mapping_files=[train_mapping_file,vali_mapping_file]
@@ -77,129 +35,69 @@ positive_vali_basedir='./data/vali/positive'
 negative_vali_basedir='./data/vali/negative'
 basedirs=[polluted_train_basedir,positive_train_basedir,negative_train_basedir,polluted_vali_basedir,positive_vali_basedir,negative_vali_basedir]
 
+def config_environment(args):
+    os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth=True
+    session = tf.Session(config=config)
+    KTF.set_session(session)
 
-
-def parser(string):
-    fn=string.split(",")[0]
-    if "negative" in fn:
-        y=0
-    elif "positive" in fn:
-        y=1
-    elif "polluted" in fn:
-        y=2
-    vector=np.asarray( list(map(float,string.split(",")[1].split(" "))) )
-    label=np_utils.to_categorical(y,3)
-    return vector,label
-
-def vec_reader(path):
-    with open(path,'r') as f:
-        line=f.readline()
-    return parser(line)
-
-###################################################################################
-
-def load_all_valid():
-    global vali_x
-    vali_x = np.zeros([len(vali_x_file_list), 173056])
-    for i,f in enumerate(vali_x_file_list):
-        vali_x[i],tmp= vec_reader(f)
-
-
-def data_generator(is_training):
-    global index
-    global vali_index
-    while(1):
-        if is_training == True:
-            if index + batch_size > len(train_x_file_list):
-                index = 0
-            file_list = train_x_file_list[index:index + batch_size]
-            label_list = train_y[index:index + batch_size]
-            index += batch_size
-        else:
-            if vali_index + batch_size > len(vali_x_file_list):
-                vali_index = 0
-            file_list = vali_x_file_list[vali_index:vali_index + batch_size]
-            label_list = vali_y[vali_index:vali_index + batch_size]
-            vali_index += batch_size
-
-        output = np.zeros([batch_size, vector_length])
-        for i in range(batch_size):
-            output[i],tmp=vec_reader(file_list[i])
-
-        yield output, label_list
-
-train_flag=[0,0,0]
-vali_flag=[0,0,0]
-###################################################################################
-
-def data_generator_balance(is_training):
-    global train_flag
-    global vali_flag
-    if is_training:
-        s=train_start_index[:]
-        e=train_end_index[:]
-        l=train_len[:]
-    else:
-        s=vali_start_index[:]
-        e=vali_end_index[:]
-        l=vali_len[:]
-    while(1):
-        file_list=[]
-        label_list=[]
-        for b in range(int(batch_size/3)):
-            for i in range(3):
-                index=(train_flag[i] if is_training else vali_flag[i])+s[i]
-                if is_training:
-                    file_list.append(train_x_file_list[index])
-                    label_list.append(train_y[index])
-                    train_flag[i]+=1
-                    if(train_flag[i]>=l[i]):
-                        train_flag[i]=0
-                else:
-                    file_list.append(vali_x_file_list[index])
-                    label_list.append(vali_y[index])
-                    vali_flag[i]+=1
-                    if(vali_flag[i]>=l[i]):
-                        vali_flag[i]=0
-
-        # c=list(zip(file_list,label_list))
-        # random.shuffle(c)
-        # file_list,label_list=zip(*c)
-        label_list=np.asarray(label_list)
-        output = np.zeros([batch_size, vector_length])
-        for i in range(batch_size):
-            output[i],tmp=vec_reader(file_list[i])
-        yield(output,label_list)
-
-###################################################################################
-
-def get_model():
-    model = Sequential()
-    model.add(BatchNormalization(input_shape=(vector_length,)))
-    model.add(Dense(units=1024 ,kernel_initializer='random_uniform',activation='elu'))
-    model.add(BatchNormalization())
-    model.add(Dropout(0.5))
-    model.add(Dense(units=1024,kernel_initializer='random_uniform',activation='elu'))
-    model.add(BatchNormalization())
-    model.add(Dropout(0.5))
-    model.add(Dense(units=3,activation='softmax'))
-    model.summary()
+def get_model(args):
+    input_layer=Input(shape=(args.vector_length,))
+    hidden=Dropout(0.25)(input_layer)
+    hidden=Dense(32,activation='relu')(hidden)
+    output=Dense(args.n_labels,activation='softmax')(hidden)
+    model=Model(input_layer,output)
     return model
 
 ###################################################################################
 
 def training(model):
-    es=EarlyStopping(monitor='val_loss', patience=20, verbose=0, mode='auto')
-    #rlr=ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=10, verbose=0, mode='auto', epsilon=0.0001, cooldown=0, min_lr=0)
-    mck=ModelCheckpoint(filepath='yolo9000_model_best.h5',monitor='val_loss',save_best_only=True)
-    tb = keras.callbacks.TensorBoard(log_dir='./Graph', histogram_freq=1, write_graph=True, write_images=True)
+    model=get_model(args)
+    model.compile(loss='categorical_crossentropy',optimizer=Adam(),metrics=['accuracy'])
 
-    class_weight = {0: negative_weight,1: positive_weigt,2: polluted_weight}
-
-    adadelta=Adadelta()
-    model.compile(loss='categorical_crossentropy',optimizer='adam',metrics=['acc'])
-    model.fit_generator(data_generator(True) if 'balance' not in os.sys.argv else data_generator_balance(True),validation_data=(vali_x,vali_y),validation_steps=1,steps_per_epoch=len(train_x_file_list)//batch_size if 'balance' not in os.sys.argv else min(train_len)//batch_size, epochs=epoch,callbacks=[mck,es,tb],class_weight=class_weight)
-    model.save('yolo9000_model.h5')
+    if not os.path.exists('./log'):
+        os.mkdir('./log')
+    nowtime=time.strftime("%Y-%m-%d-%H:%M", time.localtime())
+    print("######### TRAINING FILE POSTFIX #########")
+    print(" "*13,nowtime)
+    print("#########################################")
+    scriptBackuper(os.path.basename(__file__),nowtime)
+    jst=model.to_json()
+    with open('./models/transferyolo_'+nowtime+'_json.json','w') as file:
+        file.write(jst)
+    cblog = CSVLogger('./log/transfer_yolo_'+nowtime+'.csv')
+    cbtb = TensorBoard(log_dir=('./Graph/'+"transfer_yolo_"+nowtime.replace("-","").replace(":","")),batch_size=args.batch)
+    cbckpt=ModelCheckpoint('./models/transfer_yolo_'+nowtime+'_best.h5',monitor='val_loss',save_best_only=True)
+    cbckptw=ModelCheckpoint('./models/transfer_yolo_'+nowtime+'_best_weight.h5',monitor='val_loss',save_best_only=True,save_weights_only=True)
+    cbes=EarlyStopping(monitor='val_loss', patience=10, verbose=0, mode='auto')
+    cbrlr=ReduceLROnPlateau()
+    x_train_list,y_train,indexes=read_x_y_mapping(mappings,basedirs,'train',not args.balance,args,txt=True)
+    x_vali_list,y_vali,_=read_x_y_mapping(mappings,basedirs,'vali',False,args)
+    x_vali=load_all_valid(x_vali_list,args)
+    try:
+        model.fit_generator(
+            data_generator(True,x_train_list,y_train,args,indexes),
+            validation_data=(x_vali,y_vali),
+            validation_steps=1,
+            steps_per_epoch=(46),
+            #steps_per_epoch=min(np.asarray([indexes[i][2] for i in range(3)]))//args.batch,
+            #steps_per_epoch=int(len(x_train_list))//int(batch_size),
+            epochs=args.epochs,
+            callbacks=[cblog,cbtb,cbckpt],
+            class_weight=([0.092,0.96,0.94] if not args.balance else [1,1,1])
+        )
+        model.save('./models/cnn_'+nowtime+'.h5')
+        model.save_weights('./models/cnn_'+nowtime+'_weight.h5')
+        
+        y_pred=model.predict(x_vali)
+        y_pred=np.argmax(y_pred,axis=1)
+        y_ture=np.argmax(y_vali,axis=1)
+        labels=['negative','positive','polluted']
+        plot_confusion_matrix(y_ture,y_pred,labels)
+        evaluate(y_ture,y_pred)
+    except KeyboardInterrupt:
+        os.system("sh purge.sh "+nowtime)
 
 ###################################################################################
 
@@ -261,7 +159,7 @@ def get_model_memory_usage(batch_size, model):
     return gbytes
 
 def main():
-    
+    #TODO: arg.vector_length
     if(mode=='train'):
         if 'balance' in os.sys.argv:
             read_x_y_mapping('train',False)
