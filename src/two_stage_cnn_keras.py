@@ -143,7 +143,7 @@ def dev(args):
 
 if __name__=="__main__":
     import argparse
-    parser=argparse.ArgumentParser(description="cnn on TB")
+    parser=argparse.ArgumentParser(description="Two stage cnn on TB")
     parser.add_argument('--train',action='store_true',help='Training mode')
     parser.add_argument('--test',action='store_true',help='Testing mode')
     parser.add_argument('--dev',action='store_true',help='Dev mode')
