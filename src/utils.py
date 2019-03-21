@@ -6,15 +6,26 @@ import cv2
 from PIL import Image
 
 def create_x_y_mapping(mappings,basedirs,train_or_vali,txt=False):
-    train_mapping_file=mappings[0]
-    vali_mapping_file=mappings[1]
+    # train_mapping_file=mappings[0]
+    # vali_mapping_file=mappings[1]
+    
+    train_mapping_file=next(c for c in mappings if "vali" not in c)
+    vali_mapping_file=next(c for c in mappings if "vali" in c)
 
-    polluted_train_basedir=basedirs[0]
-    positive_train_basedir=basedirs[1]
-    negative_train_basedir=basedirs[2]
-    polluted_vali_basedir=basedirs[3]
-    positive_vali_basedir=basedirs[4]
-    negative_vali_basedir=basedirs[5]
+    # polluted_train_basedir=basedirs[0]
+    # positive_train_basedir=basedirs[1]
+    # negative_train_basedir=basedirs[2]
+    # polluted_vali_basedir=basedirs[3]
+    # positive_vali_basedir=basedirs[4]
+    # negative_vali_basedir=basedirs[5]
+
+    polluted_train_basedir=next(c for c in basedirs if "polluted" in c and "vali" not in c)
+    positive_train_basedir=next(c for c in basedirs if "positive" in c and "vali" not in c)
+    negative_train_basedir=next(c for c in basedirs if "negative" in c and "vali" not in c)
+    polluted_vali_basedir=next(c for c in basedirs if "polluted" in c and "vali" in c)
+    positive_vali_basedir=next(c for c in basedirs if "positive" in c and "vali" in c)
+    negative_vali_basedir=next(c for c in basedirs if "negative" in c and "vali" in c)
+
     basedir_list=[]
     if(train_or_vali=='train'):
         mapping_file=train_mapping_file
@@ -22,6 +33,13 @@ def create_x_y_mapping(mappings,basedirs,train_or_vali,txt=False):
     else:
         mapping_file=vali_mapping_file
         basedir_list=[negative_vali_basedir,positive_vali_basedir,polluted_vali_basedir]
+    print(" >Creating mapping file:",mapping_file)
+    print("  NTB:",negative_train_basedir)
+    print("  PTB:",positive_train_basedir)
+    print("  XTB:",polluted_train_basedir)
+    print("  NVB:",negative_vali_basedir)
+    print("  PVB:",positive_vali_basedir)
+    print("  XVB:",polluted_vali_basedir)
     with open(mapping_file,'w') as f:
         f.write("file_path,label\n")
         for i,b in enumerate(basedir_list):
