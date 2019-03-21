@@ -80,7 +80,7 @@ def train(args):
     with open('./models/cnn_'+nowtime+'_json.json','w') as file:
         file.write(jst)
     cblog = CSVLogger('./log/cnn_'+nowtime+'.csv')
-    cbtb = TensorBoard(log_dir='./Graph',batch_size=args.batch)
+    cbtb = TensorBoard(log_dir=('./Graph/'+"cnn_"+nowtime.replace("-","").replace(":","")),batch_size=args.batch)
     cbckpt=ModelCheckpoint('./models/cnn_'+nowtime+'_best.h5',monitor='val_loss',save_best_only=True)
     cbes=EarlyStopping(monitor='val_loss', patience=10, verbose=0, mode='auto')
     cbrlr=ReduceLROnPlateau()
