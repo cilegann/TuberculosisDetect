@@ -37,13 +37,12 @@ negative_vali_basedir='./data/vali/negative'
 basedirs=[polluted_train_basedir,positive_train_basedir,negative_train_basedir,polluted_vali_basedir,positive_vali_basedir,negative_vali_basedir]
 
 def config_environment(args):
-    os.environ['CUDA_VISIBLE_DEVICES'] = '1'
     config = tf.ConfigProto()
     config.gpu_options.allow_growth=True
     session = tf.Session(config=config)
     KTF.set_session(session)
     batch_size=args.batch
-    
+    os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
 def get_model(args):
 
@@ -72,7 +71,7 @@ def get_model(args):
         import tensorflow as tf
         from keras.layers import multiply
         a1,a2,b1,b2=Lambda(lambda tensor: tf.split(tensor,4,1))(x)
-        return K.concatenate([a2,multiply([a1,b1]),multiply([a1,b2])])
+        return K.concatenate([multiply([a1,b2]),a2,multiply([a1,b1])])
     model_output=Lambda(two_stage_classifier)(model_output)
     model=Model(model_input,model_output)
 
@@ -110,7 +109,7 @@ def train(args):
             validation_data=(x_vali,y_vali),
             validation_steps=1,
             steps_per_epoch=(46),
-            #steps_per_epoch=min(np.asarray([indexes[i][2] for i in range(3)]))//(args.batch//3),
+            #steps_per_epoch=min(np.asarray([indexes[i][2] for i in range(3)]))//args.batch,
             #steps_per_epoch=int(len(x_train_list))//int(batch_size),
             epochs=args.epochs,
             callbacks=[cblog,cbtb,cbckpt,cbckptw],
@@ -144,7 +143,7 @@ def dev(args):
 
 if __name__=="__main__":
     import argparse
-    parser=argparse.ArgumentParser(description="Two stage cnn on TB")
+    parser=argparse.ArgumentParser(description="cnn on TB")
     parser.add_argument('--train',action='store_true',help='Training mode')
     parser.add_argument('--test',action='store_true',help='Testing mode')
     parser.add_argument('--dev',action='store_true',help='Dev mode')

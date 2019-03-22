@@ -96,7 +96,7 @@ def train(args):
             validation_data=(x_vali,y_vali),
             validation_steps=1,
             #steps_per_epoch=(46),
-            steps_per_epoch=min(np.asarray([indexes[i][2] for i in range(3)]))//args.batch,
+            steps_per_epoch=min(np.asarray([indexes[i][2] for i in range(3)]))//(args.batch//3),
             #steps_per_epoch=int(len(x_train_list))//int(batch_size),
             epochs=args.epochs,
             callbacks=[cblog,cbtb,cbckpt,cbckptw],

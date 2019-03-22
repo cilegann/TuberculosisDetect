@@ -37,13 +37,12 @@ negative_vali_basedir='./data/vali/negative'
 basedirs=[polluted_train_basedir,positive_train_basedir,negative_train_basedir,polluted_vali_basedir,positive_vali_basedir,negative_vali_basedir]
 
 def config_environment(args):
-    os.environ['CUDA_VISIBLE_DEVICES'] = '1'
     config = tf.ConfigProto()
     config.gpu_options.allow_growth=True
     session = tf.Session(config=config)
     KTF.set_session(session)
     batch_size=args.batch
-    
+    os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
 def get_model(args):
 
@@ -110,7 +109,7 @@ def train(args):
             validation_data=(x_vali,y_vali),
             validation_steps=1,
             steps_per_epoch=(46),
-            #steps_per_epoch=min(np.asarray([indexes[i][2] for i in range(3)]))//(args.batch//3),
+            #steps_per_epoch=min(np.asarray([indexes[i][2] for i in range(3)]))//args.batch,
             #steps_per_epoch=int(len(x_train_list))//int(batch_size),
             epochs=args.epochs,
             callbacks=[cblog,cbtb,cbckpt,cbckptw],
