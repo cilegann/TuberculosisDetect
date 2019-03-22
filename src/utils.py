@@ -126,8 +126,6 @@ vali_indexes=[-1,-1,-1]
 def data_generator(is_training,file_lists,y,args,indexes=None,txt=False):
     is_balanced=args.balance
     batch_size=args.batch
-    height=args.height
-    width=args.width
     if is_balanced:
         global train_indexes
         global vali_indexes
@@ -167,7 +165,7 @@ def data_generator(is_training,file_lists,y,args,indexes=None,txt=False):
             random.shuffle(c)
             file_list,label_list=zip(*c)
             if not txt:
-                output = np.zeros([batch_size, height,width, 3])
+                output = np.zeros([batch_size, args.height,args.width, 3])
                 for i in range(batch_size):
                     output[i]=preprocessing_augment(Image.open(file_list[i]),label_list[i],args)
             else:
@@ -194,7 +192,7 @@ def data_generator(is_training,file_lists,y,args,indexes=None,txt=False):
             file_list = file_lists[index-batch_size:index]
             label_list = y[index-batch_size:index]
             if not txt:
-                output = np.zeros([batch_size, height,width, 3])
+                output = np.zeros([batch_size, args.height,args.width, 3])
                 for i in range(batch_size):
                     output[i]=preprocessing_augment(Image.open(file_list[i]),label_list[i],args)
             else:
