@@ -149,6 +149,7 @@ if __name__=="__main__":
     parser.add_argument('--test',action='store_true',help='Testing mode')
     parser.add_argument('--dev',action='store_true',help='Dev mode')
     parser.add_argument('-m','--model',type=str,help='The model you want to test on')
+    parser.add_argument('--best',action='store_true',help='Load best model or not')
     parser.add_argument('--width',type=int,default=420)
     parser.add_argument('--height',type=int,default=131)
     parser.add_argument('--batch',type=int,default=32,help='Batch size')
@@ -166,6 +167,19 @@ if __name__=="__main__":
 
     if args.test:
         print("Testing mode")
-        test(args)
+        if args.model==None:
+            print("Please specify model with -m or --model")
+        else:
+            if 'h5' not in args.model:
+                for r,_,fs in os.walk('./models'):
+                    for f in fs:
+                        if args.model in f:
+                            if 'best.h5' in f and args.best:
+                                args.model=os.path.join(r,f)
+                                print("Model:",args.model)
+                            elif 'best' not in f and '.h5' in f and not args.best:
+                                args.model=os.path.join(r,f)
+                                print("Model:",args.model)
+            test(args)
     if args.dev:
         print("Dev mode")
