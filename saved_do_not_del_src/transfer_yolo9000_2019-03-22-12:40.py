@@ -34,7 +34,7 @@ negative_vali_basedir='./data/vali/negative'
 basedirs=[polluted_train_basedir,positive_train_basedir,negative_train_basedir,polluted_vali_basedir,positive_vali_basedir,negative_vali_basedir]
 
 def config_environment(args):
-    os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
+    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
     config = tf.ConfigProto()
     config.gpu_options.allow_growth=True
     session = tf.Session(config=config)
@@ -43,11 +43,10 @@ def config_environment(args):
 def get_model(args):
     input_layer=Input(shape=(args.vector_length,))
     hidden=Dropout(0.25)(input_layer)
-    hidden=Dense(64,activation='relu')(hidden)
+    hidden=Dense(32,activation='relu')(hidden)
     hidden=BatchNormalization()(hidden)
     output=Dense(args.n_labels,activation='softmax')(hidden)
     model=Model(input_layer,output)
-    model.summary()
     return model
 
 ###################################################################################
@@ -71,7 +70,7 @@ def train(model):
     cbckpt=ModelCheckpoint('./models/transfer_yolo_'+nowtime+'_best.h5',monitor='val_loss',save_best_only=True)
     cbckptw=ModelCheckpoint('./models/transfer_yolo_'+nowtime+'_best_weight.h5',monitor='val_loss',save_best_only=True,save_weights_only=True)
     cbes=EarlyStopping(monitor='val_loss', patience=10, verbose=0, mode='auto')
-    cbrlr=ReduceLROnPlateau(monitor='val_loss',patience=5)
+    cbrlr=ReduceLROnPlateau()
     x_train_list,y_train,indexes=read_x_y_mapping(mappings,basedirs,'train',not args.balance,args,txt=True)
     x_vali_list,y_vali,_=read_x_y_mapping(mappings,basedirs,'vali',False,args,txt=True)
     x_vali=load_all_valid(x_vali_list,args,txt=True)
@@ -84,7 +83,7 @@ def train(model):
             steps_per_epoch=min(np.asarray([indexes[i][2] for i in range(3)]))//(args.batch//3),
             #steps_per_epoch=int(len(x_train_list))//int(batch_size),
             epochs=args.epochs,
-            callbacks=[cblog,cbtb,cbckpt,cbckptw,cbes,cbrlr],
+            callbacks=[cblog,cbtb,cbckpt,cbckptw],
             class_weight=([0.092,0.96,0.94] if not args.balance else [1,1,1])
         )
         model.save('./models/transfer_yolo_'+nowtime+'.h5')
@@ -99,15 +98,7 @@ def train(model):
     except KeyboardInterrupt:
         os.system("sh purge.sh "+nowtime)
 def test(args):
-    model=load_model(args.model)
-    x_vali_list,y_vali,_=read_x_y_mapping(mappings,basedirs,'vali',False,args,txt=True)
-    x_vali=load_all_valid(x_vali_list,args,txt=True)
-    y_pred=model.predict(x_vali)
-    y_pred=np.argmax(y_pred,axis=1)
-    y_ture=np.argmax(y_vali,axis=1)
-    labels=['negative','positive','polluted']
-    plot_confusion_matrix(y_ture,y_pred,labels)
-    evaluate(y_ture,y_pred)
+    pass
 
 def dev(args):
     pass
@@ -120,11 +111,10 @@ if __name__ == "__main__":
     parser.add_argument('--dev',action='store_true',help='Dev mode')
     parser.add_argument('-m','--model',type=str,help='The model you want to test on')
     parser.add_argument('--vector_length',type=int,default=173056)
-    parser.add_argument('--batch',type=int,default=64,help='Batch size')
+    parser.add_argument('--batch',type=int,default=32,help='Batch size')
     parser.add_argument('--epochs',type=int,default=200,help='#Epochs')
     parser.add_argument('--balance',action='store_true',help='Balance data by undersampling the majiroty data')
     parser.add_argument('--n_labels',type=int,default=3)
-    parser.add_argument('-gpu',type=str,default='1',help='No. of GPU to use')
     args=parser.parse_args()
     config_environment(args)
     if args.train:

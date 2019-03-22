@@ -37,7 +37,7 @@ negative_vali_basedir='./data/vali/negative'
 basedirs=[polluted_train_basedir,positive_train_basedir,negative_train_basedir,polluted_vali_basedir,positive_vali_basedir,negative_vali_basedir]
 
 def config_environment(args):
-    os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+    os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
     config = tf.ConfigProto()
     config.gpu_options.allow_growth=True
     session = tf.Session(config=config)
@@ -155,6 +155,7 @@ if __name__=="__main__":
     parser.add_argument('--epochs',type=int,default=200,help='#Epochs')
     parser.add_argument('--balance',action='store_true',help='Balance data by undersampling the majiroty data')
     parser.add_argument('--n_labels',type=int,default=3)
+    parser.add_argument('-gpu',type=str,default='1',help='No. of GPU to use')
     args=parser.parse_args()
     config_environment(args)
     if args.train:
