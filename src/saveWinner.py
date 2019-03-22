@@ -1,6 +1,6 @@
 import os
 import sys
-from shutil import copyfile
+from shutil import copyfile,move
 modelDir='./models'
 modelSaveDir='./saved_do_not_del_models'
 srcDir='./src'
@@ -32,7 +32,7 @@ print("                    _______________ \n\
                      `.  * * *  .'\n\
                        `-.....-'\n\
 ")
-for d,s in zip([modelDir,srcDir],[modelSaveDir,srcSaveDir]):
+for d,s in zip([modelDir],[modelSaveDir]):
     for r,ds,fs in os.walk(d):
         for f in fs:
             ok=False
@@ -41,6 +41,19 @@ for d,s in zip([modelDir,srcDir],[modelSaveDir,srcSaveDir]):
                     ok=True
                     break
             if ok:
+                print("Copying:",os.path.join(d,f),"->",os.path.join(s,f))
                 copyfile(os.path.join(d,f),os.path.join(s,f))
+
+for d,s in zip([srcDir],[srcSaveDir]):
+    for r,ds,fs in os.walk(d):
+        for f in fs:
+            ok=False
+            for a in sys.argv[1:]:
+                if a in f:
+                    ok=True
+                    break
+            if ok:
+                print("Moving:",os.path.join(d,f),"->",os.path.join(s,f))
+                move(os.path.join(d,f),os.path.join(s,f))
 
                 

@@ -82,6 +82,7 @@ def train(args):
     cblog = CSVLogger('./log/cnn_'+nowtime+'.csv')
     cbtb = TensorBoard(log_dir=('./Graph/'+"cnn_"+nowtime.replace("-","").replace(":","")),batch_size=args.batch)
     cbckpt=ModelCheckpoint('./models/cnn_'+nowtime+'_best.h5',monitor='val_loss',save_best_only=True)
+    cbckptw=ModelCheckpoint('./models/cnn_'+nowtime+'_best_weight.h5',monitor='val_loss',save_best_only=True,save_weights_only=True)
     cbes=EarlyStopping(monitor='val_loss', patience=10, verbose=0, mode='auto')
     cbrlr=ReduceLROnPlateau()
     x_train_list,y_train,indexes=read_x_y_mapping(mappings,basedirs,'train',not args.balance,args)
@@ -96,7 +97,7 @@ def train(args):
             #steps_per_epoch=min(np.asarray([indexes[i][2] for i in range(3)]))//(args.batch//3),
             #steps_per_epoch=int(len(x_train_list))//int(batch_size),
             epochs=args.epochs,
-            callbacks=[cblog,cbtb,cbckpt],
+            callbacks=[cblog,cbtb,cbckpt,cbckptw],
             class_weight=([0.092,0.96,0.94] if not args.balance else [1,1,1])
         )
         model.save('./models/cnn_'+nowtime+'.h5')
@@ -125,6 +126,7 @@ def train_on_positive(args):
     cblog = CSVLogger('./log/cnn_'+nowtime+'.csv')
     cbtb = TensorBoard(log_dir=('./Graph/'+"cnn_"+nowtime),batch_size=args.batch)
     cbckpt=ModelCheckpoint('./models/cnn_'+nowtime+'_best.h5',monitor='val_loss',save_best_only=True)
+    cbckptw=ModelCheckpoint('./models/cnn_'+nowtime+'_best_weight.h5',monitor='val_loss',save_best_only=True,save_weights_only=True)
     cbes=EarlyStopping(monitor='val_loss', patience=10, verbose=0, mode='auto')
     cbrlr=ReduceLROnPlateau()
     x_train_list,y_train,t_indexes=read_x_y_mapping(mappings,basedirs,'train',not args.balance,args)
