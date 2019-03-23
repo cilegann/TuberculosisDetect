@@ -31,7 +31,7 @@ def cam(filename,img,label,model,backprop_modifier='guided'):
     plt.close()
 
 
-def plot_confusion_matrix_by_cm(cmx,classes,filename='cm',title='Confusion matrix',cmap=plt.cm.Blues):
+def plot_confusion_matrix_by_cm(cmx,classes,filename='cm',title='Confusion matrix',cmap=plt.cm.Blues,save=True):
     cmx=cmx.astype('float')/cmx.sum(axis=1)[:,np.newaxis]
     print("\n CONFUSION MATRIX")
     print(cmx)
@@ -48,8 +48,11 @@ def plot_confusion_matrix_by_cm(cmx,classes,filename='cm',title='Confusion matri
     plt.xlabel("Predict")
     for i, j in itertools.product(range(cmx.shape[0]), range(cmx.shape[1])):
         plt.text(j, i, '{:.2f}'.format(cmx[i, j]), horizontalalignment="center",
-            color="white" if cmx[i, j] > 0.5 else "black",fontsize=20)   
-    plt.savefig(filename+'.png')
+            color="white" if cmx[i, j] > 0.5 else "black",fontsize=20) 
+    if save: 
+        if not os.path.exist("./confusionMatrix"):
+            os.path.mkdir("./confusionMatrix")
+        plt.savefig('./confusionMatrix/'+filename+'.png')
     try:
         plt.show()
     except:
