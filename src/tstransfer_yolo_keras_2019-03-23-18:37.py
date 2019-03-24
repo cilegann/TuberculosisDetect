@@ -59,7 +59,7 @@ def get_model(args):
         import tensorflow as tf
         from keras.layers import multiply
         a1,a2,b1,b2=Lambda(lambda tensor: tf.split(tensor,4,1))(x)
-        return K.concatenate([multiply([a1,b1]),multiply([a1,b2]),a2])
+        return K.concatenate([multiply([a1,b1]),a2,multiply([a1,b2])])
     model_output=Lambda(two_stage_classifier)(model_output)
     model=Model(model_input,model_output)
 
@@ -86,7 +86,7 @@ def train(args):
     cbckpt=ModelCheckpoint('./models/tstransfer_yolo_keras_'+nowtime+'_best.h5',monitor='val_loss',save_best_only=True)
     cbckptw=ModelCheckpoint('./models/tstransfer_yolo_keras_'+nowtime+'_best_weight.h5',monitor='val_loss',save_best_only=True,save_weights_only=True)
     cbes=EarlyStopping(monitor='val_loss', patience=10, verbose=0, mode='auto')
-    cbrlr=ReduceLROnPlateau()
+    cbrlr=ReduceLROnPlateau(monitor='val_loss',verbose=1,patience=5)
     x_train_list,y_train,indexes=read_x_y_mapping(mappings,basedirs,'train',not args.balance,args,txt=True)
     x_vali_list,y_vali,_=read_x_y_mapping(mappings,basedirs,'vali',False,args,txt=True)
     x_vali=load_all_valid(x_vali_list,args,txt=True)
@@ -100,7 +100,7 @@ def train(args):
             steps_per_epoch=min(np.asarray([indexes[i][2] for i in range(3)]))//(args.batch//3),
             #steps_per_epoch=int(len(x_train_list))//int(batch_size),
             epochs=args.epochs,
-            callbacks=[cblog,cbtb,cbckpt,cbckptw],
+            callbacks=[cblog,cbtb,cbckpt,cbckptw,cbrlr],
             class_weight=([0.092,0.96,0.94] if not args.balance else [1,1,1])
         )
         model.save('./models/tstransfer_yolo_keras_'+nowtime+'.h5')

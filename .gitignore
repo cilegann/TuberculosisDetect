@@ -11,6 +11,7 @@ saliency_map/
 Graph/
 data_origin_distribution_version/
 data_vali_equal_v1/
+exp_data/
 .DS_Store
 *.pyc
 *.DS_Store
