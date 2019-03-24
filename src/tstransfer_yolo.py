@@ -51,17 +51,19 @@ if(gpu=='single'):
     KTF.set_session(session)
     batch_size=64
 
-train_mapping_file='./data/YOLO9000_x_y_mapping.csv'
-vali_mapping_file='./data/YOLO9000_vali_x_y_mapping.csv'
+data='./data_origin_distribution_version'
+train_mapping_file=os.path.join(data,'YOLO9000_x_y_mapping.csv')
+vali_mapping_file=os.path.join(data,'YOLO9000_vali_x_y_mapping.csv')
+mappings=[train_mapping_file,vali_mapping_file]
 
+polluted_train_basedir=os.path.join(data,'polluted')
+positive_train_basedir=os.path.join(data,'positive')
+negative_train_basedir=os.path.join(data,'negative')
+polluted_vali_basedir=os.path.join(data,'vali/polluted')
+positive_vali_basedir=os.path.join(data,'vali/positive')
+negative_vali_basedir=os.path.join(data,'vali/negative')
+basedirs=[polluted_train_basedir,positive_train_basedir,negative_train_basedir,polluted_vali_basedir,positive_vali_basedir,negative_vali_basedir]
 
-
-polluted_train_basedir='./data/polluted'
-positive_train_basedir='./data/positive'
-negative_train_basedir='./data/negative'
-polluted_vali_basedir='./data/vali/polluted'
-positive_vali_basedir='./data/vali/positive'
-negative_vali_basedir='./data/vali/negative'
 
 if(host=='cilegann-PC' or gpu=='single'):
     batch_size=32

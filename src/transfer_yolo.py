@@ -22,17 +22,6 @@ import numpy as np
 from utils import *
 from evaluate_tools import cam,plot_confusion_matrix,evaluate
 
-train_mapping_file='./data/YOLO9000_x_y_mapping.csv'
-vali_mapping_file='./data/YOLO9000_vali_x_y_mapping.csv'
-mappings=[train_mapping_file,vali_mapping_file]
-polluted_train_basedir='./data/polluted'
-positive_train_basedir='./data/positive'
-negative_train_basedir='./data/negative'
-polluted_vali_basedir='./data/vali/polluted'
-positive_vali_basedir='./data/vali/positive'
-negative_vali_basedir='./data/vali/negative'
-basedirs=[polluted_train_basedir,positive_train_basedir,negative_train_basedir,polluted_vali_basedir,positive_vali_basedir,negative_vali_basedir]
-
 def config_environment(args):
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
     config = tf.ConfigProto()
@@ -72,8 +61,8 @@ def train(model):
     cbckptw=ModelCheckpoint('./models/transfer_yolo_'+nowtime+'_best_weight.h5',monitor='val_loss',save_best_only=True,save_weights_only=True)
     cbes=EarlyStopping(monitor='val_loss', patience=10, verbose=0, mode='auto')
     cbrlr=ReduceLROnPlateau(monitor='val_loss',patience=5)
-    x_train_list,y_train,indexes=read_x_y_mapping(mappings,basedirs,'train',not args.balance,args,txt=True)
-    x_vali_list,y_vali,_=read_x_y_mapping(mappings,basedirs,'vali',False,args,txt=True)
+    x_train_list,y_train,indexes=read_x_y_mapping(args.mappings,args.basedirs,'train',not args.balance,args,txt=True)
+    x_vali_list,y_vali,_=read_x_y_mapping(args.mappings,args.basedirs,'vali',False,args,txt=True)
     x_vali=load_all_valid(x_vali_list,args,txt=True)
     try:
         model.fit_generator(
@@ -81,7 +70,7 @@ def train(model):
             validation_data=(x_vali,y_vali),
             validation_steps=1,
             #steps_per_epoch=(46),
-            steps_per_epoch=min(np.asarray([indexes[i][2] for i in range(3)]))//(args.batch//3),
+            steps_per_epoch=min(np.asarray([indexes[i][2] for i in range(3)]))//(args.batch//3) if args.balance else int(len(x_train_list))//int(batch_size),
             #steps_per_epoch=int(len(x_train_list))//int(batch_size),
             epochs=args.epochs,
             callbacks=[cblog,cbtb,cbckpt,cbckptw,cbes,cbrlr],
@@ -100,7 +89,7 @@ def train(model):
         os.system("sh purge.sh "+nowtime)
 def test(args):
     model=load_model(args.model)
-    x_vali_list,y_vali,_=read_x_y_mapping(mappings,basedirs,'vali',False,args,txt=True)
+    x_vali_list,y_vali,_=read_x_y_mapping(args.mappings,args.basedirs,'vali',False,args,txt=True)
     x_vali=load_all_valid(x_vali_list,args,txt=True)
     y_pred=model.predict(x_vali)
     y_pred=np.argmax(y_pred,axis=1)
@@ -125,9 +114,24 @@ if __name__ == "__main__":
     parser.add_argument('--epochs',type=int,default=200,help='#Epochs')
     parser.add_argument('--balance',action='store_true',help='Balance data by undersampling the majiroty data')
     parser.add_argument('--n_labels',type=int,default=3)
-    parser.add_argument('-gpu',type=str,default='1',help='No. of GPU to use')
+    parser.add_argument('--gpu',type=str,default='1',help='No. of GPU to use')
+    parser.add_argument('--data',type=str,default='data',help="Dataset")
     args=parser.parse_args()
     config_environment(args)
+    
+    data=args.data
+    train_mapping_file=os.path.join(data,'YOLO9000_x_y_mapping.csv')
+    vali_mapping_file=os.path.join(data,'YOLO9000_vali_x_y_mapping.csv')
+    args.mappings=[train_mapping_file,vali_mapping_file]
+
+    polluted_train_basedir=os.path.join(data,'polluted')
+    positive_train_basedir=os.path.join(data,'positive')
+    negative_train_basedir=os.path.join(data,'negative')
+    polluted_vali_basedir=os.path.join(data,'vali/polluted')
+    positive_vali_basedir=os.path.join(data,'vali/positive')
+    negative_vali_basedir=os.path.join(data,'vali/negative')
+    args.basedirs=[polluted_train_basedir,positive_train_basedir,negative_train_basedir,polluted_vali_basedir,positive_vali_basedir,negative_vali_basedir]
+
     if args.train:
         print("Training mode")
         if args.balance:
