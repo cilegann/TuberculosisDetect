@@ -50,7 +50,7 @@ def plot_confusion_matrix_by_cm(cmx,classes,filename='cm',title='Confusion matri
         plt.text(j, i, '{:.2f}'.format(cmx[i, j]), horizontalalignment="center",
             color="white" if cmx[i, j] > 0.5 else "black",fontsize=20) 
     if save: 
-        if not os.path.exist("./confusionMatrix"):
+        if not os.path.exists("./confusionMatrix"):
             os.path.mkdir("./confusionMatrix")
         plt.savefig('./confusionMatrix/'+filename+'.png')
     try:
