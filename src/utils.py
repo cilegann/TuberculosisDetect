@@ -5,6 +5,7 @@ import numpy as np
 import cv2
 from PIL import Image
 
+# this is v1 mapping creator
 def create_x_y_mapping(mappings,basedirs,train_or_vali,txt=False):
     # train_mapping_file=mappings[0]
     # vali_mapping_file=mappings[1]
@@ -55,7 +56,7 @@ def create_x_y_mapping(mappings,basedirs,train_or_vali,txt=False):
                             pathName=os.path.join(root,filename)
                             if( ('jpg' in pathName) or ('png' in pathName) ):
                                 f.write(pathName+','+str(i)+'\n')
-                    
+# this is v1 mapping reader
 def read_x_y_mapping(mappings,basedirs,train_or_vali,shuffle,args,txt=False):
     train_mapping_file=mappings[0]
     vali_mapping_file=mappings[1]
@@ -67,6 +68,33 @@ def read_x_y_mapping(mappings,basedirs,train_or_vali,shuffle,args,txt=False):
         mapping_file=vali_mapping_file
     if(not os.path.exists(mapping_file)):
         create_x_y_mapping(mappings,basedirs,train_or_vali,txt=txt)
+    with open(mapping_file,'r') as f:
+        next(f)
+        lines=f.readlines()
+        for line in lines:
+            file_list.append(line.split(',')[0])
+            y.append(line.split(',')[1][:-1])
+    if(shuffle):
+        c=list(zip(file_list,y))
+        random.shuffle(c)
+        file_list,y=zip(*c)
+        indexes=[-1,-1,-1]
+    else:
+        s0=y.index('0')
+        s1=y.index('1')
+        s2=y.index('2')
+        e0=s1-1
+        e1=s2-1
+        e2=len(y)-1
+        l0=e0-s0+1
+        l1=e1-s1+1
+        l2=e2-s2+1
+        indexes=[[s0,e0,l0],[s1,e1,l1],[s2,e2,l2]]
+    return file_list,np_utils.to_categorical(np.array(y),args.n_labels),indexes
+
+def read_mapping(mapping_file,shuffle,args,txt=False):
+    file_list=[]
+    y=[]
     with open(mapping_file,'r') as f:
         next(f)
         lines=f.readlines()
