@@ -33,24 +33,24 @@ def get_model(args):
 
     model_input=Input(shape=(args.height,args.width,3))
     
-    cnn_a=Conv2D(32,(3,3),activation='relu',data_format='channels_last')(model_input)
+    cnn_a=Conv2D(32,(3,3),strides=(1,1),activation='relu',data_format='channels_last')(model_input)
     cnn_a=MaxPool2D((2,2))(cnn_a)
-    cnn_a=Conv2D(64,(3,3),activation='relu')(cnn_a)
+    cnn_a=Conv2D(64,(3,3),strides=(1,1),activation='relu')(cnn_a)
     cnn_a=(MaxPool2D((2,2))(cnn_a))
     dense_a=Flatten()(cnn_a)
-    dense_a=(Dense(64,activation='relu')(dense_a))
-    dense_a=(Dense(64,activation='relu')(dense_a))
-    # dense_a=BatchNormalization()(dense_a)
+    dense_a=Dropout(0.3)(dense_a)
+    dense_a=(Dense(32,activation='relu')(dense_a))
+    dense_a=BatchNormalization()(dense_a)
     output_a=Dense(2,activation='softmax')(dense_a)
     
-    cnn_b=Conv2D(32,(3,3),activation='relu',data_format='channels_last')(model_input)
+    cnn_b=Conv2D(32,(3,3),strides=(1,1),activation='relu',data_format='channels_last')(model_input)
     cnn_b=MaxPool2D((2,2))(cnn_b)
-    cnn_b=Conv2D(64,(3,3),activation='relu')(cnn_b)
+    cnn_b=Conv2D(64,(3,3),strides=(1,1),activation='relu')(cnn_b)
     cnn_b=(MaxPool2D((2,2))(cnn_b))
     dense_b=Flatten()(cnn_b)
-    dense_b=(Dense(64,activation='relu')(dense_b))
-    dense_b=(Dense(64,activation='relu')(dense_b))
-    # dense_b=BatchNormalization()(dense_b)
+    dense_b=Dropout(0.3)(dense_b)
+    dense_b=(Dense(32,activation='relu')(dense_b))
+    dense_b=BatchNormalization()(dense_b)
     output_b=Dense(2,activation='softmax')(dense_b)
 
     model_output=Concatenate()([output_a,output_b])
@@ -58,7 +58,7 @@ def get_model(args):
         import tensorflow as tf
         from keras.layers import multiply
         a1,a2,b1,b2=Lambda(lambda tensor: tf.split(tensor,4,1))(x)
-        return K.concatenate([multiply([a1,b1]),multiply([a1,b2]),a2])
+        return K.concatenate([a2,multiply([a1,b1]),multiply([a1,b2])])
     model_output=Lambda(two_stage_classifier)(model_output)
     model=Model(model_input,model_output)
 
