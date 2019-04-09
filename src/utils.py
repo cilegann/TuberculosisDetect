@@ -7,18 +7,9 @@ from PIL import Image
 
 # this is v1 mapping creator
 def create_x_y_mapping(mappings,basedirs,train_or_vali,txt=False):
-    # train_mapping_file=mappings[0]
-    # vali_mapping_file=mappings[1]
-    
+
     train_mapping_file=next(c for c in mappings if "vali" not in c)
     vali_mapping_file=next(c for c in mappings if "vali" in c)
-
-    # polluted_train_basedir=basedirs[0]
-    # positive_train_basedir=basedirs[1]
-    # negative_train_basedir=basedirs[2]
-    # polluted_vali_basedir=basedirs[3]
-    # positive_vali_basedir=basedirs[4]
-    # negative_vali_basedir=basedirs[5]
 
     polluted_train_basedir=next(c for c in basedirs if "polluted" in c and "vali" not in c)
     positive_train_basedir=next(c for c in basedirs if "positive" in c and "vali" not in c)
@@ -123,7 +114,7 @@ def preprocessing_augment(data,label,args):
     data=data.resize([args.width,args.height])
     data = np.asarray(data)
     data = data.astype('float64')
-    if (random.random() > 0.5 and int(label[1])==1):
+    if (random.random() > 0.5 and int(label[1])==1 and args.augment==True):
         data = cv2.flip(data, 1)
     data/=255.
     return data
