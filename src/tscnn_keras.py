@@ -36,19 +36,21 @@ def get_model(args):
     cnn_a=Conv2D(32,(3,3),activation='relu',data_format='channels_last')(model_input)
     cnn_a=MaxPool2D((2,2))(cnn_a)
     cnn_a=Conv2D(64,(3,3),activation='relu')(cnn_a)
-    cnn_a=Dropout(0.25)(MaxPool2D((2,2))(cnn_a))
+    cnn_a=(MaxPool2D((2,2))(cnn_a))
     dense_a=Flatten()(cnn_a)
-    dense_a=(Dense(32,activation='relu')(dense_a))
-    dense_a=BatchNormalization()(dense_a)
+    dense_a=(Dense(64,activation='relu')(dense_a))
+    dense_a=(Dense(64,activation='relu')(dense_a))
+    # dense_a=BatchNormalization()(dense_a)
     output_a=Dense(2,activation='softmax')(dense_a)
     
     cnn_b=Conv2D(32,(3,3),activation='relu',data_format='channels_last')(model_input)
     cnn_b=MaxPool2D((2,2))(cnn_b)
     cnn_b=Conv2D(64,(3,3),activation='relu')(cnn_b)
-    cnn_b=Dropout(0.25)(MaxPool2D((2,2))(cnn_b))
+    cnn_b=(MaxPool2D((2,2))(cnn_b))
     dense_b=Flatten()(cnn_b)
-    dense_b=(Dense(32,activation='relu')(dense_b))
-    dense_b=BatchNormalization()(dense_b)
+    dense_b=(Dense(64,activation='relu')(dense_b))
+    dense_b=(Dense(64,activation='relu')(dense_b))
+    # dense_b=BatchNormalization()(dense_b)
     output_b=Dense(2,activation='softmax')(dense_b)
 
     model_output=Concatenate()([output_a,output_b])
@@ -85,7 +87,7 @@ def train(args):
     cbes=EarlyStopping(monitor='val_loss', patience=10, verbose=0, mode='auto')
     cbrlr=ReduceLROnPlateau()
     x_train_list,y_train,indexes=read_mapping(args.mappings[0],not args.balance,args)
-    x_vali_list,y_vali,_=read_x_y_mapping(args.mappings[1],False,args)
+    x_vali_list,y_vali,_=read_mapping(args.mappings[1],False,args)
     x_vali=load_all_valid(x_vali_list,args)
     
     try:
@@ -114,7 +116,7 @@ def train(args):
 
 def test(args):
     model=load_model(args.model)
-    x_vali_list,y_vali,_=read_x_y_mapping(args.mappings[0],False,args)
+    x_vali_list,y_vali,_=read_mapping(args.mappings[1],False,args)
     x_vali=load_all_valid(x_vali_list,args)
     y_pred=model.predict(x_vali)
     y_pred=np.argmax(y_pred,axis=1)
@@ -142,6 +144,7 @@ if __name__=="__main__":
     parser.add_argument('--n_labels',type=int,default=3)
     parser.add_argument('--gpu',type=str,default='1',help='No. GPU to use')
     parser.add_argument('--data',type=str,default='190408_newdata',help='Dataset')
+    parser.add_argument('--augment',action='store_true',help='Data augment by randomly flipping image')
     args=parser.parse_args()
     config_environment(args)
 
