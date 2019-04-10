@@ -6,12 +6,12 @@ import cv2
 from PIL import Image
 from evaluate_tools import plot_confusion_matrix,evaluate
 from utils import *
-from sklearn.svm import SVC
+from sklearn import linear_model
 import pickle
 from tqdm import tqdm
 
 def get_model(args):
-    model = SVC(gamma='auto')
+    model = linear_model.SGDClassifier(max_iter=10000, tol=1e-3,loss='log')
     return model
 
 def train(args):
@@ -46,7 +46,7 @@ def train(args):
                 x = x.reshape((n_samples, -1))
                 y=np.argmax(y,axis=1)
                 y = y.reshape((n_samples))
-                model.fit(x,y)
+                model.partial_fit(x,y,classes=np.asarray([0,1,2]))
         y_pred=model.predict(x_vali)
         #y_pred=np.argmax(y_pred,axis=1)
         y_pred=y_pred.reshape((len(y_pred),1))
@@ -55,10 +55,10 @@ def train(args):
         plot_confusion_matrix(y_ture,y_pred,labels)
         evaluate(y_ture,y_pred)
     except KeyboardInterrupt:
-        with open('models/svm_clf_'+nowtime+".pickle",'wb') as file:
+        with open('models/linearSGD_'+nowtime+".pickle",'wb') as file:
             pickle.dump(model,file)
         os.system("sh purge.sh "+nowtime)
-    with open('models/svm_clf_'+nowtime+".pickle",'wb') as file:
+    with open('models/linearSGD_'+nowtime+".pickle",'wb') as file:
         pickle.dump(model,file)
 
 def test(args):
