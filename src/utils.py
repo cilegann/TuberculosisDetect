@@ -108,6 +108,13 @@ def read_mapping(mapping_file,shuffle,args,txt=False):
         l1=e1-s1+1
         l2=e2-s2+1
         indexes=[[s0,e0,l0],[s1,e1,l1],[s2,e2,l2]]
+        fln=file_list[s0:e0+1]
+        flp=file_list[s1:e1+1]
+        flx=file_list[s2:e2+1]
+        random.shuffle(fln)
+        random.shuffle(flp)
+        random.shuffle(flx)
+        file_list=fln+flp+flx
     return file_list,np_utils.to_categorical(np.array(y),args.n_labels),indexes
 
 def preprocessing_augment(data,label,args):
