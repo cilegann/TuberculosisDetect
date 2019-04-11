@@ -75,7 +75,7 @@ def train(args):
     cbes=EarlyStopping(monitor='val_loss', patience=10, verbose=0, mode='auto')
     cbrlr=ReduceLROnPlateau(monitor='val_loss',verbose=1,patience=5)
     x_train_list,y_train,indexes=read_mapping(args.mappings[0],not args.balance,args,txt=True)
-    x_vali_list,y_vali,_=read_x_y_mapping(args.mappings[1],False,args,txt=True)
+    x_vali_list,y_vali,_=read_mapping(args.mappings[1],False,args,txt=True)
     x_vali=load_all_valid(x_vali_list,args,txt=True)
     
     try:
@@ -104,7 +104,7 @@ def train(args):
 
 def test(args):
     model=load_model(args.model)
-    x_vali_list,y_vali,_=read_x_y_mapping(args.mappings[0],False,args,txt=True)
+    x_vali_list,y_vali,_=read_mapping(args.mappings[1],False,args,txt=True)
     x_vali=load_all_valid(x_vali_list,args,txt=True)
     y_pred=model.predict(x_vali)
     y_pred=np.argmax(y_pred,axis=1)
