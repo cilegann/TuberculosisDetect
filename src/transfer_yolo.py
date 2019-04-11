@@ -32,7 +32,7 @@ def config_environment(args):
 def get_model(args):
     input_layer=Input(shape=(args.vector_length,))
     hidden=Dropout(0.25)(input_layer)
-    hidden=Dense(64,activation='relu')(hidden)
+    hidden=Dense(32,activation='relu')(hidden)
     hidden=BatchNormalization()(hidden)
     output=Dense(args.n_labels,activation='softmax')(hidden)
     model=Model(input_layer,output)

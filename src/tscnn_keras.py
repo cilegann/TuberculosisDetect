@@ -58,7 +58,7 @@ def get_model(args):
         import tensorflow as tf
         from keras.layers import multiply
         a1,a2,b1,b2=Lambda(lambda tensor: tf.split(tensor,4,1))(x)
-        return K.concatenate([multiply([a1,b1]),a2,multiply([a1,b2])])
+        return K.concatenate([multiply([a1,b1]),multiply([a1,b2]),a2])
     model_output=Lambda(two_stage_classifier)(model_output)
     model=Model(model_input,model_output)
 

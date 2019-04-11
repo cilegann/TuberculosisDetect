@@ -118,16 +118,13 @@ if __name__=="__main__":
         if args.model==None:
             print("Please specify model with -m or --model")
         else:
-            if 'h5' not in args.model:
+            if 'pkl' not in args.model:
                 for r,_,fs in os.walk('./models'):
                     for f in fs:
                         if args.model in f:
-                            if 'best.h5' in f and args.best:
-                                args.model=os.path.join(r,f)
-                                print("Model:",args.model)
-                            elif 'best' not in f and '.h5' in f and not args.best:
-                                args.model=os.path.join(r,f)
-                                print("Model:",args.model)
+                            args.model=os.path.join(r,f)
+                            print("Model:",args.model)
+
             test(args)
     if args.dev:
         print("Dev mode")
