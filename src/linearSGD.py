@@ -47,6 +47,15 @@ def train(args):
                 y=np.argmax(y,axis=1)
                 y = y.reshape((n_samples))
                 model.partial_fit(x,y,classes=np.asarray([0,1,2]))
+            y_pred=model.predict(x_vali)
+            y_pred=y_pred.reshape((len(y_pred),1))
+            y_ture=np.argmax(y_vali,axis=1)
+            good=0
+            for i in range(len(y_ture)):
+                if y_ture[i]==y_pred[i]:
+                    good+=1
+            print("accu on vali:",good/len(y_ture))
+                
         y_pred=model.predict(x_vali)
         #y_pred=np.argmax(y_pred,axis=1)
         y_pred=y_pred.reshape((len(y_pred),1))
