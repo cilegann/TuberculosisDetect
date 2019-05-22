@@ -184,3 +184,7 @@ if __name__=="__main__":
             test(args)
     if args.dev:
         print("Dev mode")
+        model=get_model(args)
+        from keras.utils import plot_model
+        plot_model(model,to_file='tscnn.png',show_shapes=False)
+
