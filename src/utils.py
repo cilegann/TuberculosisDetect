@@ -248,3 +248,8 @@ def scriptBackuper(scriptName,nowtime):
     from shutil import copyfile
     newscriptName=(scriptName[:scriptName.rfind('.')]+"_"+nowtime+".py")
     copyfile('./src/'+scriptName,'./src/'+newscriptName)
+
+####################################################################################
+
+def smote():
+    pass
