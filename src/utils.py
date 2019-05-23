@@ -4,6 +4,7 @@ from keras import utils as np_utils
 import numpy as np
 import cv2
 from PIL import Image
+from random import randint, uniform,choice
 
 # this is v1 mapping creator
 def create_x_y_mapping(mappings,basedirs,train_or_vali,txt=False):
@@ -251,6 +252,5 @@ def scriptBackuper(scriptName,nowtime):
 
 ####################################################################################
 
-def smote():
-    pass
+def smote(file_list):
     pass
