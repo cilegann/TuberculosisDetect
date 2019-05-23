@@ -274,6 +274,7 @@ def smote(file_list,y,args,txt=False):
     generatedFileList=[]
     generatedLabelList=[]
     if not txt:
+        os.mkdir(os.path.join(smoteDir,'img'))
         for i,N in enumerate(newTimes):
             os.mkdir(os.path.join(smoteDir,str(i)))
             if N==0:
@@ -304,13 +305,14 @@ def smote(file_list,y,args,txt=False):
                     r=uniform(0,1)
                     newImg=((1-r)*img+r*(img2[id])).astype(int)
                     newImg= Image.fromarray(newImg.astype(np.uint8))
-                    generatedFile=os.path.join(smoteDir,str(i),str(r)+rdnFilename+'.jpg')
+                    generatedFile=os.path.join(smoteDir,'img',str(i),str(r)+rdnFilename+'.jpg')
                     newImg.save(generatedFile)
                     generatedFileList.append(generatedFile)
                     generatedLabelList.append(str(i))
             print("")
     else:
         #TODO txt format
+        os.mkdir(os.path.join(smoteDir,'txt'))
         for i,N in enumerate(newTimes):
             os.mkdir(os.path.join(smoteDir,str(i)))
             if N==0:
@@ -340,7 +342,7 @@ def smote(file_list,y,args,txt=False):
                     r=uniform(0,1)
                     newVec=((1-r)*vec1+r*(vec2[id]))
                     #TODO
-                    generatedFile=os.path.join(smoteDir,str(i),str(r)+rdnFilename+'.txt')
+                    generatedFile=os.path.join(smoteDir,'txt',str(i),str(r)+rdnFilename+'.txt')
                     newImg.save(generatedFile)
                     generatedFileList.append(generatedFile)
                     generatedLabelList.append(str(i))
