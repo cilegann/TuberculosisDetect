@@ -133,6 +133,7 @@ def preprocessing_augment(data,label,args):
 
 def yoloParser(string):
     fn=string.split(",")[0]
+    y=-1
     if "negative" in fn:
         y=0
     elif "positive" in fn:
@@ -274,9 +275,10 @@ def smote(file_list,y,args,txt=False):
     generatedFileList=[]
     generatedLabelList=[]
     if not txt:
+        print("[SMOTE] Image mode")
         os.mkdir(os.path.join(smoteDir,'img'))
         for i,N in enumerate(newTimes):
-            os.mkdir(os.path.join(smoteDir,str(i)))
+            os.mkdir(os.path.join(smoteDir,'img',str(i)))
             if N==0:
                 continue
             print("[SMOTE] Performing on class",i)
@@ -312,9 +314,10 @@ def smote(file_list,y,args,txt=False):
             print("")
     else:
         #TODO txt format
+        print("[SMOTE] TXT mode")
         os.mkdir(os.path.join(smoteDir,'txt'))
         for i,N in enumerate(newTimes):
-            os.mkdir(os.path.join(smoteDir,str(i)))
+            os.mkdir(os.path.join(smoteDir,'txt',str(i)))
             if N==0:
                 continue
             print("[SMOTE] Performing on class",i)
@@ -322,7 +325,7 @@ def smote(file_list,y,args,txt=False):
             x=[]
             print("[SMOTE] Reading files")
             for file in originFileList:
-                x.append(vec_reader(file))
+                x.append(vec_reader(file)[0])
             x=np.asarray(x)
             k=5
             from sklearn.neighbors import NearestNeighbors
@@ -330,12 +333,13 @@ def smote(file_list,y,args,txt=False):
             print("[SMOTE] Performing KNN for k =",k)
             knn.fit(x)
             del x
-            for f,file in enumerate(originFileList):
-                print("[SMOTE] Generating...",f+1,"/",len(originFileList),end='\r')
-                vec1=vec_reader(file)
+            from tqdm import tqdm
+            for f,file in tqdm(enumerate(originFileList)):
+                #print("[SMOTE] Generating...",f+1,"/",len(originFileList),end='\r')
+                vec1=vec_reader(file)[0]
                 idx=knn.kneighbors(np.reshape(vec1,(1,-1)), return_distance=False)
                 idx=idx[0][1:]
-                vec2=[vec_reader(originFileList[id]) for id in idx]
+                vec2=[vec_reader(originFileList[id])[0] for id in idx]
                 for n in range(N):
                     rdnFilename=__randomSD(8)
                     id=choice(range(len(vec2)))
@@ -345,8 +349,10 @@ def smote(file_list,y,args,txt=False):
                     generatedFile=os.path.join(smoteDir,'txt',str(i),str(r)+rdnFilename+'.txt')
                     with open(generatedFile,'w') as file:
                         file.write(generatedFile+",")
-                        for i in newVec:
-                            file.write(i+" ")
+                        for index,vec in enumerate(newVec):
+                            file.write(str(vec))
+                            if index!=len(newVec)-1:
+                                file.write(" ")
                     generatedFileList.append(generatedFile)
                     generatedLabelList.append(str(i))
             print("")
