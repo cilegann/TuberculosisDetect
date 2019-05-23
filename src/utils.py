@@ -343,7 +343,10 @@ def smote(file_list,y,args,txt=False):
                     newVec=((1-r)*vec1+r*(vec2[id]))
                     #TODO
                     generatedFile=os.path.join(smoteDir,'txt',str(i),str(r)+rdnFilename+'.txt')
-                    newImg.save(generatedFile)
+                    with open(generatedFile,'w') as file:
+                        file.write(generatedFile+",")
+                        for i in newVec:
+                            file.write(i+" ")
                     generatedFileList.append(generatedFile)
                     generatedLabelList.append(str(i))
             print("")
