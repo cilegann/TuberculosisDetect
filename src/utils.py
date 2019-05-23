@@ -5,6 +5,10 @@ import numpy as np
 import cv2
 from PIL import Image
 from random import randint, uniform,choice
+import random
+import string
+import shutil
+import math
 
 # this is v1 mapping creator
 def create_x_y_mapping(mappings,basedirs,train_or_vali,txt=False):
@@ -251,6 +255,95 @@ def scriptBackuper(scriptName,nowtime):
     copyfile('./src/'+scriptName,'./src/'+newscriptName)
 
 ####################################################################################
+def __randomSD(stringLength=6):
+    """Generate a random string of letters and digits """
+    lettersAndDigits = string.ascii_letters + string.digits
+    return ''.join(random.choice(lettersAndDigits) for i in range(stringLength))
 
-def smote(file_list):
-    pass
+def smote(file_list,y,args,txt=False):
+    print("Performing SMOTE")
+    smoteDir='./data/smote/'
+    if os.path.isdir(smoteDir):
+        shutil.rmtree(smoteDir)
+    os.mkdir(smoteDir)
+    #originCount={i:y.count(i) for i in range(args.n_labels)}
+    originCount=np.asarray([y.count(str(i)) for i in range(args.n_labels)])
+    newTimes=[math.ceil( (np.max(originCount)/originCount[i]) )-1 for i in range(args.n_labels)]
+    print("[SMOTE] Original num of data:",originCount)
+    print("[SMOTE] Times to duplicate:",newTimes)
+    generatedFileList=[]
+    generatedLabelList=[]
+    if not txt:
+        for i,N in enumerate(newTimes):
+            os.mkdir(os.path.join(smoteDir,str(i)))
+            if N==0:
+                continue
+            print("[SMOTE] Performing on class",i)
+            originFileList=file_list[y.index(str(i)):y.index(str(i))+y.count(str(i))]
+            x=[]
+            print("[SMOTE] Reading files")
+            for file in originFileList:
+                x.append(np.asarray(Image.open(file).resize([args.width,args.height])))
+            x=np.asarray(x)
+            x=np.reshape(x,(len(x),-1))
+            k=5
+            from sklearn.neighbors import NearestNeighbors
+            knn = NearestNeighbors(n_neighbors=k+1,p=2)
+            print("[SMOTE] Performing KNN for k =",k)
+            knn.fit(x)
+            del x
+            for f,file in enumerate(originFileList):
+                print("[SMOTE] Generating...",f+1,"/",len(originFileList),end='\r')
+                idx=knn.kneighbors(np.reshape(np.asarray(Image.open(file).resize([args.width,args.height])),(1,-1)), return_distance=False)
+                idx=idx[0][1:]
+                img=np.asarray(Image.open(file))
+                img2=[np.asarray(Image.open(originFileList[id])) for id in idx]
+                for n in range(N):
+                    rdnFilename=__randomSD(8)
+                    id=choice(range(len(img2)))
+                    r=uniform(0,1)
+                    newImg=((1-r)*img+r*(img2[id])).astype(int)
+                    newImg= Image.fromarray(newImg.astype(np.uint8))
+                    generatedFile=os.path.join(smoteDir,str(i),str(r)+rdnFilename+'.jpg')
+                    newImg.save(generatedFile)
+                    generatedFileList.append(generatedFile)
+                    generatedLabelList.append(str(i))
+            print("")
+    else:
+        #TODO txt format
+        for i,N in enumerate(newTimes):
+            os.mkdir(os.path.join(smoteDir,str(i)))
+            if N==0:
+                continue
+            print("[SMOTE] Performing on class",i)
+            originFileList=file_list[y.index(str(i)):y.index(str(i))+y.count(str(i))]
+            x=[]
+            print("[SMOTE] Reading files")
+            for file in originFileList:
+                x.append(vec_reader(file))
+            x=np.asarray(x)
+            k=5
+            from sklearn.neighbors import NearestNeighbors
+            knn = NearestNeighbors(n_neighbors=k+1,p=2)
+            print("[SMOTE] Performing KNN for k =",k)
+            knn.fit(x)
+            del x
+            for f,file in enumerate(originFileList):
+                print("[SMOTE] Generating...",f+1,"/",len(originFileList),end='\r')
+                vec1=vec_reader(file)
+                idx=knn.kneighbors(np.reshape(vec1,(1,-1)), return_distance=False)
+                idx=idx[0][1:]
+                vec2=[vec_reader(originFileList[id]) for id in idx]
+                for n in range(N):
+                    rdnFilename=__randomSD(8)
+                    id=choice(range(len(vec2)))
+                    r=uniform(0,1)
+                    newVec=((1-r)*vec1+r*(vec2[id]))
+                    #TODO
+                    generatedFile=os.path.join(smoteDir,str(i),str(r)+rdnFilename+'.txt')
+                    newImg.save(generatedFile)
+                    generatedFileList.append(generatedFile)
+                    generatedLabelList.append(str(i))
+            print("")
+    print("[SMOTE]",len(generatedFileList),"files have been generated")
+    return generatedFileList+file_list,generatedLabelList+y
