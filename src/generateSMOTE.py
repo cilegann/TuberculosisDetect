@@ -46,9 +46,9 @@ with open(train_mapping_file,'r') as f:
 print("Origin num of data:",len(file_list))
 file_list,labels=smote(file_list,y,args,txt=True)
 with open('./mapping/'+args.data+"_smote_train_yolo9000_mapping.csv",'w') as file:
-    file.write('file_path,label')
+    file.write('file_path,label\n')
     for f,l in zip(file_list,labels):
-        file.write('\n'+f+','+l)
+        file.write(f+','+l+'\n')
 print("Num of data:",len(file_list))
 print("New mapping file has been dumped as",'./mapping/'+args.data+"_smote_train_yolo9000_mapping.csv")
 shutil.copyfile('./mapping/'+args.data+'_vali_cnn_mapping.csv','./mapping/'+args.data+'_smote_vali_yolo9000_mapping.csv')
