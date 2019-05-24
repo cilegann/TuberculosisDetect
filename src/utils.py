@@ -264,13 +264,10 @@ def __randomSD(stringLength=6):
 def smote(file_list,y,args,txt=False):
     print("Performing SMOTE")
     smoteDir='./data/smote/'
-    #if os.path.isdir(smoteDir):
-    #    shutil.rmtree(smoteDir)
     try:
         os.mkdir(smoteDir)
     except Exception as e:
         pass
-    #originCount={i:y.count(i) for i in range(args.n_labels)}
     originCount=np.asarray([y.count(str(i)) for i in range(args.n_labels)])
     newTimes=[math.ceil( (np.max(originCount)/originCount[i]) )-1 for i in range(args.n_labels)]
     print("[SMOTE] Original num of data:",originCount)
@@ -305,7 +302,7 @@ def smote(file_list,y,args,txt=False):
             knn.fit(x)
             del x
             print("[SMOTE] Generating")
-            for f,file in tqdm(enumerate(originFileList)):
+            for f,file in enumerate(tqdm(originFileList)):
                 #print("[SMOTE] Generating...",f+1,"/",len(originFileList),end='\r')
                 idx=knn.kneighbors(np.reshape(np.asarray(Image.open(file).resize([args.width,args.height])),(1,-1)), return_distance=False)
                 idx=idx[0][1:]
@@ -349,8 +346,7 @@ def smote(file_list,y,args,txt=False):
             knn.fit(x)
             del x
             print("[SMOTE] Generating")
-            for f,file in tqdm(enumerate(originFileList)):
-                #print("[SMOTE] Generating...",f+1,"/",len(originFileList),end='\r')
+            for f,file in enumerate(tqdm(originFileList)):
                 vec1=vec_reader(file)[0]
                 idx=knn.kneighbors(np.reshape(vec1,(1,-1)), return_distance=False)
                 idx=idx[0][1:]
