@@ -18,6 +18,25 @@ parser.add_argument('--data',type=str,default='190410_newdata',help='Dataset')
 parser.add_argument('--augment',action='store_true',help='Data augment by randomly flipping image')
 args=parser.parse_args()
     
+
+train_mapping_file='./mapping/'+args.data+'_train_cnn_mapping.csv'
+vali_mapping_file='./mapping/'+args.data+'_vali_cnn_mapping.csv'
+args.mappings=[train_mapping_file,vali_mapping_file]
+mapping_file=args.mappings[0]
+
+file_list=[]
+y=[]
+with open(mapping_file,'r') as f:
+    next(f)
+    lines=f.readlines()
+    for line in lines:
+        file_list.append(line.split(',')[0])
+        y.append(line.split(',')[1][:-1])
+print(len(file_list))
+a,b=smote(file_list,y,args)
+print(len(a))
+
+
 train_mapping_file='./mapping/'+args.data+'_train_yolo9000_mapping.csv'
 vali_mapping_file='./mapping/'+args.data+'_vali_yolo9000_mapping.csv'
 args.mappings=[train_mapping_file,vali_mapping_file]

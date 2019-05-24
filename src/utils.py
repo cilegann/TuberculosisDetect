@@ -9,7 +9,7 @@ import random
 import string
 import shutil
 import math
-
+from tqdm import tqdm
 # this is v1 mapping creator
 def create_x_y_mapping(mappings,basedirs,train_or_vali,txt=False):
 
@@ -264,9 +264,12 @@ def __randomSD(stringLength=6):
 def smote(file_list,y,args,txt=False):
     print("Performing SMOTE")
     smoteDir='./data/smote/'
-    if os.path.isdir(smoteDir):
-        shutil.rmtree(smoteDir)
-    os.mkdir(smoteDir)
+    #if os.path.isdir(smoteDir):
+    #    shutil.rmtree(smoteDir)
+    try:
+        os.mkdir(smoteDir)
+    except Exception as e:
+        pass
     #originCount={i:y.count(i) for i in range(args.n_labels)}
     originCount=np.asarray([y.count(str(i)) for i in range(args.n_labels)])
     newTimes=[math.ceil( (np.max(originCount)/originCount[i]) )-1 for i in range(args.n_labels)]
@@ -276,9 +279,15 @@ def smote(file_list,y,args,txt=False):
     generatedLabelList=[]
     if not txt:
         print("[SMOTE] Image mode")
-        os.mkdir(os.path.join(smoteDir,'img'))
+        try:
+            os.mkdir(os.path.join(smoteDir,'img'))
+        except Exception as e:
+            pass
         for i,N in enumerate(newTimes):
-            os.mkdir(os.path.join(smoteDir,'img',str(i)))
+            try:
+                os.mkdir(os.path.join(smoteDir,'img',str(i)))
+            except Exception as e:
+                pass
             if N==0:
                 continue
             print("[SMOTE] Performing on class",i)
@@ -295,8 +304,9 @@ def smote(file_list,y,args,txt=False):
             print("[SMOTE] Performing KNN for k =",k)
             knn.fit(x)
             del x
-            for f,file in enumerate(originFileList):
-                print("[SMOTE] Generating...",f+1,"/",len(originFileList),end='\r')
+            print("[SMOTE] Generating")
+            for f,file in tqdm(enumerate(originFileList)):
+                #print("[SMOTE] Generating...",f+1,"/",len(originFileList),end='\r')
                 idx=knn.kneighbors(np.reshape(np.asarray(Image.open(file).resize([args.width,args.height])),(1,-1)), return_distance=False)
                 idx=idx[0][1:]
                 img=np.asarray(Image.open(file))
@@ -313,11 +323,16 @@ def smote(file_list,y,args,txt=False):
                     generatedLabelList.append(str(i))
             print("")
     else:
-        #TODO txt format
         print("[SMOTE] TXT mode")
-        os.mkdir(os.path.join(smoteDir,'txt'))
+        try:
+            os.mkdir(os.path.join(smoteDir,'txt'))
+        except Exception as e:
+            pass
         for i,N in enumerate(newTimes):
-            os.mkdir(os.path.join(smoteDir,'txt',str(i)))
+            try:
+                os.mkdir(os.path.join(smoteDir,'txt',str(i)))
+            except Exception as e:
+                pass
             if N==0:
                 continue
             print("[SMOTE] Performing on class",i)
@@ -333,7 +348,7 @@ def smote(file_list,y,args,txt=False):
             print("[SMOTE] Performing KNN for k =",k)
             knn.fit(x)
             del x
-            from tqdm import tqdm
+            print("[SMOTE] Generating")
             for f,file in tqdm(enumerate(originFileList)):
                 #print("[SMOTE] Generating...",f+1,"/",len(originFileList),end='\r')
                 vec1=vec_reader(file)[0]
@@ -345,7 +360,6 @@ def smote(file_list,y,args,txt=False):
                     id=choice(range(len(vec2)))
                     r=uniform(0,1)
                     newVec=((1-r)*vec1+r*(vec2[id]))
-                    #TODO
                     generatedFile=os.path.join(smoteDir,'txt',str(i),str(r)+rdnFilename+'.txt')
                     with open(generatedFile,'w') as file:
                         file.write(generatedFile+",")
