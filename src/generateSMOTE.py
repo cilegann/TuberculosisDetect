@@ -45,7 +45,7 @@ with open(train_mapping_file,'r') as f:
         y.append(line.split(',')[1][:-1])
 print("Origin num of data:",len(file_list))
 file_list,labels=smote(file_list,y,args)
-with open('./mapping/'+args.data+"_smote_train_cnn_mapping.csv",'w') as file:
+with open('./mapping/'+args.data+"_smote_train_yolo9000_mapping.csv",'w') as file:
     file.write('file_path,label')
     for f,l in zip(file_list,labels):
         file.write('\n'+f+','+l)
