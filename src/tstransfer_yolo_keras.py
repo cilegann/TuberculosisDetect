@@ -31,12 +31,12 @@ def get_model(args):
 
     model_input=Input(shape=(args.vector_length,))
     
-    model_a=Dropout(0.25)(model_input)
+    model_a=Dropout(0.5)(model_input)
     model_a=Dense(32,activation='relu')(model_a)
     model_a=BatchNormalization()(model_a)
     output_a=Dense(2,activation='softmax')(model_a)
 
-    model_b=Dropout(0.25)(model_input)
+    model_b=Dropout(0.5)(model_input)
     model_b=Dense(32,activation='relu')(model_b)
     model_b=BatchNormalization()(model_b)
     output_b=Dense(2,activation='softmax')(model_b)
@@ -46,7 +46,7 @@ def get_model(args):
         import tensorflow as tf
         from keras.layers import multiply
         a1,a2,b1,b2=Lambda(lambda tensor: tf.split(tensor,4,1))(x)
-        return K.concatenate([multiply([a1,b1]),a2,multiply([a1,b2])])
+        return K.concatenate([a2,multiply([a1,b1]),multiply([a1,b2])])
     model_output=Lambda(two_stage_classifier)(model_output)
     model=Model(model_input,model_output)
 
@@ -87,8 +87,8 @@ def train(args):
             steps_per_epoch=min(np.asarray([indexes[i][2] for i in range(3)]))//(args.batch//3) if args.balance else int(len(x_train_list))//int(args.batch),
             #steps_per_epoch=int(len(x_train_list))//int(batch_size),
             epochs=args.epochs,
-            callbacks=[cblog,cbtb,cbckpt,cbckptw,cbrlr],
-            class_weight=([0.092,0.96,0.94] if not args.balance else [1,1,1])
+            callbacks=[cblog,cbtb,cbckpt,cbckptw,cbrlr]
+            #class_weight=([0.092,0.96,0.94] if not args.balance else [1,1,1])
         )
         model.save('./models/tstransfer_yolo_keras_'+nowtime+'.h5')
         model.save_weights('./models/tstransfer_yolo_keras_'+nowtime+'_weight.h5')

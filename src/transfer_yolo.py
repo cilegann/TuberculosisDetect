@@ -73,8 +73,8 @@ def train(model):
             steps_per_epoch=min(np.asarray([indexes[i][2] for i in range(3)]))//(args.batch//3) if args.balance else int(len(x_train_list))//int(args.batch),
             #steps_per_epoch=int(len(x_train_list))//int(batch_size),
             epochs=args.epochs,
-            callbacks=[cblog,cbtb,cbckpt,cbckptw,cbes,cbrlr],
-            class_weight=([0.092,0.96,0.94] if not args.balance else [1,1,1])
+            callbacks=[cblog,cbtb,cbckpt,cbckptw,cbes,cbrlr]
+            #class_weight=([0.092,0.96,0.94] if not args.balance else [1,1,1])
         )
         model.save('./models/transfer_yolo_'+nowtime+'.h5')
         model.save_weights('./models/transfer_yolo_'+nowtime+'_weight.h5')

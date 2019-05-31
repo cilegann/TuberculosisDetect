@@ -35,8 +35,8 @@ def get_model(args):
     model.add(Activation('relu'))
     #model.add(BatchNormalization())
     # model.add(Conv2D(32,(3,3),strides=(1,1)))
-    # model.add(Activation('relu'))
-    # #model.add(BatchNormalization())
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
     model.add(MaxPooling2D(2,2))
 
 
@@ -44,13 +44,13 @@ def get_model(args):
     model.add(Activation('relu'))
     #model.add(BatchNormalization())
     # model.add(Conv2D(64,(3,3),strides=(1,1)))
-    # model.add(Activation('relu'))
-    # #model.add(BatchNormalization())
+    model.add(Activation('relu'))
+    model.add(BatchNormalization())
     model.add(MaxPooling2D(2,2))
 
 
     model.add(Flatten())
-    model.add(Dropout(0.3))
+    model.add(Dropout(0.5))
 
     model.add(Dense(32))
     model.add(Activation('relu'))
@@ -94,8 +94,8 @@ def train(args):
             steps_per_epoch=min(np.asarray([indexes[i][2] for i in range(3)]))//(args.batch//3) if args.balance else int(len(x_train_list))//int(args.batch),
             #steps_per_epoch=int(len(x_train_list))//int(batch_size),
             epochs=args.epochs,
-            callbacks=[cblog,cbtb,cbckpt,cbckptw],
-            class_weight=([0.092,0.96,0.94] if not args.balance else [1,1,1])
+            callbacks=[cblog,cbtb,cbckpt,cbckptw]
+            #class_weight=([0.092,0.96,0.94] if not args.balance else [1,1,1])
         )
         model.save('./models/cnn_'+nowtime+'.h5')
         model.save_weights('./models/cnn_'+nowtime+'_weight.h5')
