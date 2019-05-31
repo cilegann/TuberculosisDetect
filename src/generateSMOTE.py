@@ -51,4 +51,4 @@ with open('./mapping/'+args.data+"_smote_train_yolo9000_mapping.csv",'w') as fil
         file.write(f+','+l+'\n')
 print("Num of data:",len(file_list))
 print("New mapping file has been dumped as",'./mapping/'+args.data+"_smote_train_yolo9000_mapping.csv")
-shutil.copyfile('./mapping/'+args.data+'_vali_cnn_mapping.csv','./mapping/'+args.data+'_smote_vali_yolo9000_mapping.csv')
+shutil.copyfile('./mapping/'+args.data+'_vali_yolo9000_mapping.csv','./mapping/'+args.data+'_smote_vali_yolo9000_mapping.csv')
