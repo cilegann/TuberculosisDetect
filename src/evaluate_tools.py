@@ -27,6 +27,7 @@ def cam(filename,img,label,model,backprop_modifier='guided'):
     plt.subplot(1,2,2)
     im1=plt.imshow(img, cmap=plt.cm.gray, interpolation='nearest')
     im2 = plt.imshow(heatmap,  alpha=.4, interpolation='bilinear')
+    plt.show()
     plt.savefig(filename,dpi=300)
     plt.close()
 
