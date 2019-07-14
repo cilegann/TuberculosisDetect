@@ -29,25 +29,28 @@ def config_environment(args):
     
 
 def get_model(args):
+    model_input=Input(shape=(224,224,3))
 
     model_a = VGG16(weights='imagenet', include_top=True)
     model_a.layers.pop()
     model_a.layers.pop()
-    # model.outputs = [model.layers[-2].output]
-    # model.layers[-2].outbound_nodes = []
-    hidden=Dense(32,activation='relu')(model_a.layers[-2].output)
+    hidden=Dropout(0.5)(model_a.layers[-2].output)
+    hidden=Dense(32,activation='relu')(hidden)
     hidden=BatchNormalization()(hidden)
     output_a=Dense(2, activation='softmax')(hidden)
+    model_a=Model(model_a.input,output_a)
 
     model_b = VGG16(weights='imagenet', include_top=True)
     model_b.layers.pop()
     model_b.layers.pop()
-    # model.outputs = [model.layers[-2].output]
-    # model.layers[-2].outbound_nodes = []
-    hidden=Dense(32,activation='relu')(model_b.layers[-2].output)
+    hidden=Dropout(0.5)(model_b.layers[-2].output)
+    hidden=Dense(32,activation='relu')(hidden)
     hidden=BatchNormalization()(hidden)
     output_b=Dense(2, activation='softmax')(hidden)
+    model_b=Model(model_b.input,output_b)
 
+    output_a=model_a(model_input)
+    output_b=model_b(model_input)
     model_output=Concatenate()([output_a,output_b])
     def two_stage_classifier(x):
         import tensorflow as tf
@@ -73,21 +76,21 @@ def train(args):
     print("#########################################")
     scriptBackuper(os.path.basename(__file__),nowtime)
     jst=model.to_json()
-    with open('./models/tstransfer_yolo_keras_'+nowtime+'.json','w') as file:
+    with open('./models/tstransfer_vgg_keras_'+nowtime+'.json','w') as file:
         file.write(jst)
-    cblog = CSVLogger('./log/tstransfer_yolo_keras_'+nowtime+'.csv')
-    cbtb = TensorBoard(log_dir=('./Graph/'+"tstransfer_yolo_keras_"+nowtime.replace("-","").replace(":","")),batch_size=args.batch)
-    cbckpt=ModelCheckpoint('./models/tstransfer_yolo_keras_'+nowtime+'_best.h5',monitor='val_loss',save_best_only=True)
-    cbckptw=ModelCheckpoint('./models/tstransfer_yolo_keras_'+nowtime+'_best_weight.h5',monitor='val_loss',save_best_only=True,save_weights_only=True)
+    cblog = CSVLogger('./log/tstransfer_vgg_keras_'+nowtime+'.csv')
+    cbtb = TensorBoard(log_dir=('./Graph/'+"tstransfer_vgg_keras_"+nowtime.replace("-","").replace(":","")),batch_size=args.batch)
+    cbckpt=ModelCheckpoint('./models/tstransfer_vgg_keras_'+nowtime+'_best.h5',monitor='val_loss',save_best_only=True)
+    cbckptw=ModelCheckpoint('./models/tstransfer_vgg_keras_'+nowtime+'_best_weight.h5',monitor='val_loss',save_best_only=True,save_weights_only=True)
     cbes=EarlyStopping(monitor='val_loss', patience=10, verbose=0, mode='auto')
     cbrlr=ReduceLROnPlateau(monitor='val_loss',verbose=1,patience=5)
-    x_train_list,y_train,indexes=read_mapping(args.mappings[0],not args.balance,args,txt=True)
-    x_vali_list,y_vali,_=read_mapping(args.mappings[1],False,args,txt=True)
-    x_vali=load_all_valid(x_vali_list,args,txt=True)
+    x_train_list,y_train,indexes=read_mapping(args.mappings[0],not args.balance,args)
+    x_vali_list,y_vali,_=read_mapping(args.mappings[1],False,args)
+    x_vali=load_all_valid(x_vali_list,args)
     
     try:
         model.fit_generator(
-            data_generator(True,x_train_list,y_train,args,indexes,txt=True),
+            data_generator(True,x_train_list,y_train,args,indexes),
             validation_data=(x_vali,y_vali),
             validation_steps=1,
             #steps_per_epoch=(46),
@@ -97,8 +100,8 @@ def train(args):
             callbacks=[cblog,cbtb,cbckpt,cbckptw,cbrlr]
             #class_weight=([0.092,0.96,0.94] if not args.balance else [1,1,1])
         )
-        model.save('./models/tstransfer_yolo_keras_'+nowtime+'.h5')
-        model.save_weights('./models/tstransfer_yolo_keras_'+nowtime+'_weight.h5')
+        model.save('./models/tstransfer_vgg_keras_'+nowtime+'.h5')
+        model.save_weights('./models/tstransfer_vgg_keras_'+nowtime+'_weight.h5')
         
         y_pred=model.predict(x_vali)
         y_pred=np.argmax(y_pred,axis=1)
@@ -131,18 +134,20 @@ if __name__=="__main__":
     parser.add_argument('--dev',action='store_true',help='Dev mode')
     parser.add_argument('-m','--model',type=str,help='The model you want to test on')
     parser.add_argument('--best',action='store_true',help='Load best model or not')
-    parser.add_argument('--vector_length',type=int,default=173056)
+    parser.add_argument('--width',type=int,default=224)
+    parser.add_argument('--height',type=int,default=224)
     parser.add_argument('--batch',type=int,default=32,help='Batch size')
     parser.add_argument('--epochs',type=int,default=200,help='#Epochs')
     parser.add_argument('--balance',action='store_true',help='Balance data by undersampling the majiroty data')
     parser.add_argument('--n_labels',type=int,default=3)
     parser.add_argument('--gpu',type=str,default='1',help='No. of GPU to use')
-    parser.add_argument('--data',type=str,default='190408_newdata',help='Dataset')
+    parser.add_argument('--data',type=str,default='190410_newdata_smote',help='Dataset')
+    parser.add_argument('--augment',action='store_true',help='Data augment by randomly flipping image')
     args=parser.parse_args()
     config_environment(args)
 
-    train_mapping_file='./mapping/'+args.data+'_train_yolo9000_mapping.csv'
-    vali_mapping_file='./mapping/'+args.data+'_vali_yolo9000_mapping.csv'
+    train_mapping_file='./mapping/'+args.data+'_train_cnn_mapping.csv'
+    vali_mapping_file='./mapping/'+args.data+'_vali_cnn_mapping.csv'
     args.mappings=[train_mapping_file,vali_mapping_file]
 
     # polluted_train_basedir=os.path.join(data,'polluted')
