@@ -221,6 +221,9 @@ def test(args):
     plot_confusion_matrix(y_ture,y_pred,labels)
     evaluate(y_ture,y_pred)
 
+def dev(args):
+    model=get_model(args)
+
 if __name__=="__main__":
     import argparse
     parser=argparse.ArgumentParser(description="CNN on TB")
@@ -283,4 +286,5 @@ if __name__=="__main__":
                                 print("Model:",args.model)
             test(args)
     if args.dev:
+        dev(args)
         print("Dev mode")
