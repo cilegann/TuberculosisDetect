@@ -36,9 +36,8 @@ def get_model(args):
     model = VGG16(weights='imagenet', include_top=True)
     model.layers.pop()
     model.layers.pop()
-    # model.outputs = [model.layers[-2].output]
-    # model.layers[-2].outbound_nodes = []
-    hidden=Dense(32,activation='relu')(model.layers[-2].output)
+    hidden=Dropout(0.5)(model.layers[-2].output)
+    hidden=Dense(32,activation='relu')(hidden)
     hidden=BatchNormalization()(hidden)
     x=Dense(args.n_labels, activation='softmax')(hidden)
     model=Model(model.input,x)
