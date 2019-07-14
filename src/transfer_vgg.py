@@ -9,7 +9,10 @@ import time
 import keras
 import keras.backend as K
 from keras import utils as np_utils
+from keras.preprocessing import image
+from keras.applications.vgg16 import preprocess_input
 from keras import Sequential
+from keras.applications.vgg16 import VGG16
 from keras.models import load_model,Model
 from keras.utils import multi_gpu_model
 from keras.layers import *
@@ -30,12 +33,14 @@ def config_environment(args):
     KTF.set_session(session)
 
 def get_model(args):
-    input_layer=Input(shape=(args.vector_length,))
-    hidden=Dropout(0.25)(input_layer)
-    hidden=Dense(32,activation='relu')(hidden)
+    model = VGG16(weights='imagenet', include_top=True)
+    model.layers.pop()
+    model.layers.pop()
+    #TODO dropout
+    hidden=Dense(32,activation='relu')(model.layers[-2].output)
     hidden=BatchNormalization()(hidden)
-    output=Dense(args.n_labels,activation='softmax')(hidden)
-    model=Model(input_layer,output)
+    x=Dense(args.n_labels, activation='softmax')(hidden)
+    model=Model(model.input,x)
     model.summary()
     return model
 
@@ -53,20 +58,20 @@ def train(model):
     print("#########################################")
     scriptBackuper(os.path.basename(__file__),nowtime)
     jst=model.to_json()
-    with open('./models/transferyolo_'+nowtime+'_json.json','w') as file:
+    with open('./models/transfer_vgg_'+nowtime+'_json.json','w') as file:
         file.write(jst)
-    cblog = CSVLogger('./log/transfer_yolo_'+nowtime+'.csv')
-    cbtb = TensorBoard(log_dir=('./Graph/'+"transfer_yolo_"+nowtime.replace("-","").replace(":","")),batch_size=args.batch)
-    cbckpt=ModelCheckpoint('./models/transfer_yolo_'+nowtime+'_best.h5',monitor='val_loss',save_best_only=True)
-    cbckptw=ModelCheckpoint('./models/transfer_yolo_'+nowtime+'_best_weight.h5',monitor='val_loss',save_best_only=True,save_weights_only=True)
+    cblog = CSVLogger('./log/transfer_vgg_'+nowtime+'.csv')
+    cbtb = TensorBoard(log_dir=('./Graph/'+"transfer_vgg_"+nowtime.replace("-","").replace(":","")),batch_size=args.batch)
+    cbckpt=ModelCheckpoint('./models/transfer_vgg_'+nowtime+'_best.h5',monitor='val_loss',save_best_only=True)
+    cbckptw=ModelCheckpoint('./models/transfer_vgg_'+nowtime+'_best_weight.h5',monitor='val_loss',save_best_only=True,save_weights_only=True)
     cbes=EarlyStopping(monitor='val_loss', patience=10, verbose=0, mode='auto')
     cbrlr=ReduceLROnPlateau(monitor='val_loss',patience=5)
-    x_train_list,y_train,indexes=read_mapping(args.mappings[0],not args.balance,args,txt=True)
-    x_vali_list,y_vali,_=read_mapping(args.mappings[1],False,args,txt=True)
-    x_vali=load_all_valid(x_vali_list,args,txt=True)
+    x_train_list,y_train,indexes=read_mapping(args.mappings[0],not args.balance,args)
+    x_vali_list,y_vali,_=read_mapping(args.mappings[1],False,args)
+    x_vali=load_all_valid(x_vali_list,args)
     try:
         model.fit_generator(
-            data_generator(True,x_train_list,y_train,args,indexes,txt=True),
+            data_generator(True,x_train_list,y_train,args,indexes),
             validation_data=(x_vali,y_vali),
             validation_steps=1,
             #steps_per_epoch=(46),
@@ -76,8 +81,8 @@ def train(model):
             callbacks=[cblog,cbtb,cbckpt,cbckptw,cbes,cbrlr]
             #class_weight=([0.092,0.96,0.94] if not args.balance else [1,1,1])
         )
-        model.save('./models/transfer_yolo_'+nowtime+'.h5')
-        model.save_weights('./models/transfer_yolo_'+nowtime+'_weight.h5')
+        model.save('./models/transfer_vgg_'+nowtime+'.h5')
+        model.save_weights('./models/transfer_vgg_'+nowtime+'_weight.h5')
         
         y_pred=model.predict(x_vali)
         y_pred=np.argmax(y_pred,axis=1)
@@ -89,8 +94,8 @@ def train(model):
         os.system("sh purge.sh "+nowtime)
 def test(args):
     model=load_model(args.model)
-    x_vali_list,y_vali,_=read_mapping(args.mappings[1],False,args,txt=True)
-    x_vali=load_all_valid(x_vali_list,args,txt=True)
+    x_vali_list,y_vali,_=read_mapping(args.mappings[1],False,args)
+    x_vali=load_all_valid(x_vali_list,args)
     y_pred=model.predict(x_vali)
     y_pred=np.argmax(y_pred,axis=1)
     y_ture=np.argmax(y_vali,axis=1)
@@ -109,18 +114,20 @@ if __name__ == "__main__":
     parser.add_argument('--dev',action='store_true',help='Dev mode')
     parser.add_argument('-m','--model',type=str,help='The model you want to test on')
     parser.add_argument('--best',action='store_true',help='Load best model or not')
-    parser.add_argument('--vector_length',type=int,default=173056)
+    parser.add_argument('--width',type=int,default=224)
+    parser.add_argument('--height',type=int,default=224)
     parser.add_argument('--batch',type=int,default=64,help='Batch size')
     parser.add_argument('--epochs',type=int,default=200,help='#Epochs')
     parser.add_argument('--balance',action='store_true',help='Balance data by undersampling the majiroty data')
     parser.add_argument('--n_labels',type=int,default=3)
     parser.add_argument('--gpu',type=str,default='1',help='No. of GPU to use')
-    parser.add_argument('--data',type=str,default='190408_newdata',help="Dataset")
+    parser.add_argument('--data',type=str,default='190410_newdata_smote',help="Dataset")
+    parser.add_argument('--augment',action='store_true',help='Data augment by randomly flipping image')
     args=parser.parse_args()
     config_environment(args)
     
-    train_mapping_file='./mapping/'+args.data+'_train_yolo9000_mapping.csv'
-    vali_mapping_file='./mapping/'+args.data+'_vali_yolo9000_mapping.csv'
+    train_mapping_file='./mapping/'+args.data+'_train_cnn_mapping.csv'
+    vali_mapping_file='./mapping/'+args.data+'_vali_cnn_mapping.csv'
     args.mappings=[train_mapping_file,vali_mapping_file]
 
     # polluted_train_basedir=os.path.join(data,'polluted')
