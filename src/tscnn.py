@@ -152,7 +152,6 @@ def load_all_valid(vali_x_file_list):
     x=x.astype('float64')
     x/=255.
     return x
-    #TODO backup
 
 ###################################################################################
 

@@ -167,7 +167,6 @@ def load_all_valid(vali_x_file_list):
     vali_x = np.zeros([len(vali_x_file_list), 173056])
     for i,f in enumerate(vali_x_file_list):
         vali_x[i],tmp= vec_reader(f)
-    #TODO backup
 
 ###################################################################################
 

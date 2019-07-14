@@ -69,7 +69,7 @@ def train(args):
     with open('./models/tstransfer_yolo_keras_'+nowtime+'.json','w') as file:
         file.write(jst)
     cblog = CSVLogger('./log/tstransfer_yolo_keras_'+nowtime+'.csv')
-    cbtb = TensorBoard(log_dir=('./Graph/'+"tstransfernKeras_"+nowtime.replace("-","").replace(":","")),batch_size=args.batch)
+    cbtb = TensorBoard(log_dir=('./Graph/'+"tstransfer_yolo_keras_"+nowtime.replace("-","").replace(":","")),batch_size=args.batch)
     cbckpt=ModelCheckpoint('./models/tstransfer_yolo_keras_'+nowtime+'_best.h5',monitor='val_loss',save_best_only=True)
     cbckptw=ModelCheckpoint('./models/tstransfer_yolo_keras_'+nowtime+'_best_weight.h5',monitor='val_loss',save_best_only=True,save_weights_only=True)
     cbes=EarlyStopping(monitor='val_loss', patience=10, verbose=0, mode='auto')

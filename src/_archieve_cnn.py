@@ -317,7 +317,6 @@ def main():
 
     elif(mode=='cam'):
         model=load_model(model_to_load)
-        #TODO load imgs
         imgs=[]
         y_true,y_pred=predict()
         for i,img in enumerate(imgs):

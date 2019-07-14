@@ -199,7 +199,6 @@ def load_all_valid():
     for i,f in enumerate(vali_x_file_list):
         vali_x[i],tmp= vec_reader(f)
 
-    #TODO normailize??
 
 ###################################################################################
 
