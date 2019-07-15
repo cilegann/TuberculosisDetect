@@ -32,6 +32,8 @@ def get_model(args):
     model_input=Input(shape=(224,224,3))
 
     model_a = VGG16(weights='imagenet', include_top=True)
+    for l in model_a.layers:
+        l.trainable=False
     model_a.layers.pop()
     model_a.layers.pop()
     hidden=Dropout(0.5)(model_a.layers[-2].output)
@@ -41,6 +43,8 @@ def get_model(args):
     model_a=Model(model_a.input,output_a)
 
     model_b = VGG16(weights='imagenet', include_top=True)
+    for l in model_b.layers:
+        l.trainable=False
     model_b.layers.pop()
     model_b.layers.pop()
     hidden=Dropout(0.5)(model_b.layers[-2].output)
@@ -114,8 +118,8 @@ def train(args):
 
 def test(args):
     model=load_model(args.model)
-    x_vali_list,y_vali,_=read_mapping(args.mappings[1],False,args,txt=True)
-    x_vali=load_all_valid(x_vali_list,args,txt=True)
+    x_vali_list,y_vali,_=read_mapping(args.mappings[1],False,args)
+    x_vali=load_all_valid(x_vali_list,args)
     y_pred=model.predict(x_vali)
     y_pred=np.argmax(y_pred,axis=1)
     y_ture=np.argmax(y_vali,axis=1)
