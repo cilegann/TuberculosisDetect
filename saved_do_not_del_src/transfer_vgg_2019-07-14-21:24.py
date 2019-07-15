@@ -34,6 +34,8 @@ def config_environment(args):
 
 def get_model(args):
     model = VGG16(weights='imagenet', include_top=True)
+    for l in model.layers:
+        l.trainable=False
     model.layers.pop()
     model.layers.pop()
     hidden=Dropout(0.5)(model.layers[-2].output)
@@ -41,7 +43,10 @@ def get_model(args):
     hidden=BatchNormalization()(hidden)
     x=Dense(args.n_labels, activation='softmax')(hidden)
     model=Model(model.input,x)
+
     model.summary()
+    for l in model.layers:
+        print(l,l.trainable)
     return model
 
 ###################################################################################

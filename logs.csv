@@ -41,4 +41,5 @@ TS_CNN,tscnn_keras_2019-05-25-10:56_best,190410_newdata_smote,"[a2,a1b1,a1b2]",0
 Transfer_YOLO,transfer_yolo_2019-05-27-14:28,190410_newdata_smote,,0.901,1,0.948,0.989,0.87,0.926,0.98,0.99,0.985
 Transfer_YOLO,transfer_yolo_2019-05-27-14:28_best,190410_newdata_smote,,0.95,0.96,0.955,0.95,0.95,0.95,1,0.99,0.995
 TS_Transfer_YOLO,tstransfer_yolo_keras_2019-05-30-20:54_best,190410_newdata_smote,,0.961,0.98,0.97,0.97,0.96,0.965,0.99,0.98,0.985
-Transfer_VGG,transfer_vgg_2019-07-14-17:55,190410_newdata_smote,,0.909,1,0.952,0.989,0.88,0.931,0.98,0.99,0.985
+Transfer_VGG,transfer_vgg_2019-07-14-21:24,190410_newdata_smote,,0.847,1,0.917,1,0.82,0.901,1,1,1
+Transfer_VGG,transfer_vgg_2019-07-14-21:24_best,190410_newdata_smote,,0.86,0.98,0.916,0.966,0.84,0.898,1,0.99,0.995
