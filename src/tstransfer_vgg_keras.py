@@ -36,9 +36,9 @@ def get_model(args):
         l.trainable=False
     model_a.layers.pop()
     model_a.layers.pop()
-    hidden=Dropout(0.5)(model_a.layers[-2].output)
+    hidden=Dropout(0.25)(model_a.layers[-2].output)
     hidden=Dense(32,activation='relu')(hidden)
-    hidden=BatchNormalization()(hidden)
+    # hidden=BatchNormalization()(hidden)
     output_a=Dense(2, activation='softmax')(hidden)
     model_a=Model(model_a.input,output_a)
 
@@ -47,9 +47,9 @@ def get_model(args):
         l.trainable=False
     model_b.layers.pop()
     model_b.layers.pop()
-    hidden=Dropout(0.5)(model_b.layers[-2].output)
+    hidden=Dropout(0.25)(model_b.layers[-2].output)
     hidden=Dense(32,activation='relu')(hidden)
-    hidden=BatchNormalization()(hidden)
+    # hidden=BatchNormalization()(hidden)
     output_b=Dense(2, activation='softmax')(hidden)
     model_b=Model(model_b.input,output_b)
 

@@ -119,6 +119,9 @@ def read_mapping(mapping_file,shuffle,args,txt=False):
         random.shuffle(fln)
         random.shuffle(flp)
         random.shuffle(flx)
+        print(len(fln))
+        print(len(flp))
+        print(len(flx))
         file_list=fln+flp+flx
     return file_list,np_utils.to_categorical(np.array(y),args.n_labels),indexes
 

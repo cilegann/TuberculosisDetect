@@ -55,7 +55,6 @@ def train(args):
                 if y_ture[i]==y_pred[i]:
                     good+=1
             print("accu on vali:",good/len(y_ture))
-                
         y_pred=model.predict(x_vali)
         #y_pred=np.argmax(y_pred,axis=1)
         y_pred=y_pred.reshape((len(y_pred),1))
@@ -79,6 +78,8 @@ def test(args):
     y_pred=model.predict(x_vali)
     y_pred=y_pred.reshape((len(y_pred),1))
     y_ture=np.argmax(y_vali,axis=1)
+    print(y_true.shape)
+    print(y_pred.shape)
     labels=['negative','positive','polluted']
     plot_confusion_matrix(y_ture,y_pred,labels)
     evaluate(y_ture,y_pred)

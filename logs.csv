@@ -1,13 +1,4 @@
 algorithm,name,dataset,note,0_precision,0_recall,0_FScore,1_precision,1_recall,1_FScore,2_precision,2_recall,2_FScore
-CNN,180927_cnn_model_best,data_vali_equal_v1,,0.676,0.664,,0.5,0.6,,0.889,0.727,
-TS_CNN (handcraft),0_0/1_cnn_model_best,data_vali_equal_v1,,0.797,0.5,,0.605,0.836,,0.954,0.945,
-TS_CNN (handcraft),1_0/1_cnn_model_best,data_vali_equal_v1,,0.538,0.382,,0.496,0.6,,0.916,0.991,
-TS_CNN (handcraft),2_0/1_cnn_model_best,data_vali_equal_v1,,0.468,1,,1,0.009,,0.979,0.836,
-Transfer_YOLO,181202_yolo9000_a,data_vali_equal_v1,,0.7,0.955,,0.917,0.6,,0.972,0.955,
-Transfer_YOLO,181202_yolo9000_b,data_vali_equal_v1,,0.754,0.864,,0.852,0.682,,0.897,0.945,
-TS_Transfer_YOLO (handcraft),0_0/1_transferyolo_model_best,data_vali_equal_v1,,0.658,0.964,,0.948,0.5,,0.964,0.973,
-TS_Transfer_YOLO (handcraft),1_0/1_transferyolo_model_best,data_vali_equal_v1,,0.711,0.964,,0.923,0.545,,0.94,0.991,
-TS_Transfer_YOLO (handcraft),2_0/1_transferyolo_model_best,data_vali_equal_v1,,0.539,1,,0,0,,0.873,1,
 CNN,cnn_2019-03-20-14:44_best,data_vali_equa_peek,,0.907,0.98,,0.948,0.91,,1,0.96,
 CNN,cnn_2019-03-20-14:44,data_vali_equa_peek,,0.961,0.74,,0.74,0.97,,1,0.92,
 TS_CNN,tscnnkeras_2019-03-20-22:44_best,data_vali_equa_peek,[a1b2/a1b1/a2],0.923,0.96,,0.959,0.94,,0.99,0.97,
@@ -18,28 +9,29 @@ TS_CNN,tscnnkeras_2019-03-20-22:44_best,data_vali_equa_peek,[a2/a1b1/a1b2],0.922
 TS_CNN,tscnnkeras_2019-03-20-22:44,data_vali_equa_peek,[a2/a1b1/a1b2],0.839,0.99,,0.988,0.8,,0.95,0.96,
 Transfer_YOLO,transfer_yolo_2019-03-22-12:40,data_vali_equa_peek,,0.875,0.98,,0.989,0.88,,0.99,0.98,
 Transfer_YOLO,transfer_yolo_2019-03-22-12:40_best,data_vali_equa_peek,,0.951,0.98,,0.979,0.95,,0.99,0.99,
-Linear SGD,linearSGD_2019-04-10-00:19,190408_newdara,,0.681,0.94,0.79,0.963,0.52,0.675,0.907,0.98,0.942
-CNN,cnn_2019-04-09-13:35_best,190408_newdata,,0.795,0.93,0.857,0.92,0.8,0.856,0.979,0.94,0.959
-TS_CNN,tscnn_keras_2019-04-09-14:54_best,190408_newdata,[a1b1/a1b2/a2],0.854,0.88,0.867,0.876,0.85,0.863,0.99,0.99,0.99
-TS_CNN,tscnn_keras_2019-04-09-16:08_best,190408_newdata,[a2/a1b1/a1b2],0.867,0.85,0.859,0.863,0.88,0.871,0.99,0.99,0.99
-TS_CNN,tscnn_keras_2019-04-09-18:52_best,190408_newdata,[a1b1/a2/a1b2],0.871,0.88,0.876,0.895,0.85,0.872,0.942,0.98,0.961
-LinearSGD,linearSGD_2019-04-11-18:08,190410_newdata,,0.56,0.93,0.699,0.8,0.36,0.497,0.989,0.88,0.931
-CNN,cnn_2019-04-10-11:36_best,190410_newdata,,0.844,0.92,0.88,0.894,0.84,0.866,0.99,0.96,0.975
-CNN,cnn_2019-04-10-11:36,190410_newdata,,0.719,0.97,0.826,0.905,0.67,0.77,1,0.91,0.953
-TS_CNN,tscnn_2019-04-10-13:13_best,190410_newdata,[a2/a1b1/a1b2],0.86,0.86,0.86,0.876,0.85,0.863,0.971,1,0.985
-TS_CNN,tscnn_2019-04-11-14:36_best,190410_newdata,[a1b1/a1b2/a2],0.866,0.84,0.853,0.837,0.87,0.853,0.99,0.98,0.985
-TS_CNN,tscnn_2019-04-11-16:20_best,190410_newdata,[a1b1/a2/a1b2],0.798,0.75,0.773,0.784,0.8,0.792,0.952,0.99,0.971
-Transfer_YOLO,transfer_yolo_2019-04-10-10:52_best,190410_newdata,,0.916,0.98,0.947,0.968,0.91,0.938,1,0.99,0.995
-TS_Transfer_YOLO,tstranser_yolo_keras_2019-04-11-16:48_best,190410_newdata,[a2/a1b1/a1b2],0.933,0.97,0.951,0.968,0.92,0.944,0.98,0.99,0.985
-TS_Transfer_YOLO,tstranser_yolo_keras_2019-04-11-17:03_best,190410_newdata,[a1b1/a1b2/a2],0.898,0.97,0.933,0.957,0.89,0.922,1,0.99,0.995
-TS_Transfer_YOLO,tstranser_yolo_keras_2019-04-11-17:05_best,190410_newdata,[a1b1/a1b2/a2],0.917,1,0.957,0.978,0.91,0.943,1,0.98,0.99
-LinearSGD,,,,,,,,,,,,
-CNN,cnn_2019-05-25-10:44,190410_newdata_smote,,0.723,0.99,0.835,0.941,0.64,0.762,1,0.95,0.974
-CNN,cnn_2019-05-25-10:44_best,190410_newdata_smote,,0.89,0.81,0.848,0.822,0.88,0.85,0.961,0.98,0.97
+Linear SGD,linearSGD_2019-04-10-00:19,190408_newdara,,0.681,0.94,0.79,0.963,0.52,0.675,0.907,0.98,
+CNN,cnn_2019-04-09-13:35_best,190408_newdata,,0.795,0.93,0.857,0.92,0.8,0.856,0.979,0.94,
+TS_CNN,tscnn_keras_2019-04-09-14:54_best,190408_newdata,[a1b1/a1b2/a2],0.854,0.88,0.867,0.876,0.85,0.863,0.99,0.99,
+TS_CNN,tscnn_keras_2019-04-09-16:08_best,190408_newdata,[a2/a1b1/a1b2],0.867,0.85,0.859,0.863,0.88,0.871,0.99,0.99,
+TS_CNN,tscnn_keras_2019-04-09-18:52_best,190408_newdata,[a1b1/a2/a1b2],0.871,0.88,0.876,0.895,0.85,0.872,0.942,0.98,
+LinearSGD,linearSGD_2019-04-11-18:08,190410_newdata,,0.56,0.93,0.699,0.8,0.36,0.497,0.989,0.88,
+CNN,cnn_2019-04-10-11:36_best,190410_newdata,,0.844,0.92,0.88,0.894,0.84,0.866,0.99,0.96,
+CNN,cnn_2019-04-10-11:36,190410_newdata,,0.719,0.97,0.826,0.905,0.67,0.77,1,0.91,
+TS_CNN,tscnn_2019-04-10-13:13_best,190410_newdata,[a2/a1b1/a1b2],0.86,0.86,0.86,0.876,0.85,0.863,0.971,1,
+TS_CNN,tscnn_2019-04-11-14:36_best,190410_newdata,[a1b1/a1b2/a2],0.866,0.84,0.853,0.837,0.87,0.853,0.99,0.98,0.942
+TS_CNN,tscnn_2019-04-11-16:20_best,190410_newdata,[a1b1/a2/a1b2],0.798,0.75,0.773,0.784,0.8,0.792,0.952,0.99,0.959
+Transfer_YOLO,transfer_yolo_2019-04-10-10:52_best,190410_newdata,,0.916,0.98,0.947,0.968,0.91,0.938,1,0.99,0.99
+TS_Transfer_YOLO,tstranser_yolo_keras_2019-04-11-16:48_best,190410_newdata,[a2/a1b1/a1b2],0.933,0.97,0.951,0.968,0.92,0.944,0.98,0.99,0.99
+TS_Transfer_YOLO,tstranser_yolo_keras_2019-04-11-17:03_best,190410_newdata,[a1b1/a1b2/a2],0.898,0.97,0.933,0.957,0.89,0.922,1,0.99,0.961
+TS_Transfer_YOLO,tstranser_yolo_keras_2019-04-11-17:05_best,190410_newdata,[a1b1/a1b2/a2],0.917,1,0.957,0.978,0.91,0.943,1,0.98,0.931
+LinearSGD,,,,,,,,,,,,0.975
+CNN,cnn_2019-05-25-10:44,190410_newdata_smote,,0.723,0.99,0.835,0.941,0.64,0.762,1,0.95,0.953
+CNN,cnn_2019-05-25-10:44_best,190410_newdata_smote,,0.89,0.81,0.848,0.822,0.88,0.85,0.961,0.98,0.985
 TS_CNN,tscnn_keras_2019-05-25-10:56,190410_newdata_smote,"[a2,a1b1,a1b2]",0.897,0.87,0.883,0.863,0.88,0.871,0.98,0.99,0.985
-TS_CNN,tscnn_keras_2019-05-25-10:56_best,190410_newdata_smote,"[a2,a1b1,a1b2]",0.893,0.92,0.906,0.906,0.87,0.888,0.98,0.99,0.985
-Transfer_YOLO,transfer_yolo_2019-05-27-14:28,190410_newdata_smote,,0.901,1,0.948,0.989,0.87,0.926,0.98,0.99,0.985
-Transfer_YOLO,transfer_yolo_2019-05-27-14:28_best,190410_newdata_smote,,0.95,0.96,0.955,0.95,0.95,0.95,1,0.99,0.995
-TS_Transfer_YOLO,tstransfer_yolo_keras_2019-05-30-20:54_best,190410_newdata_smote,,0.961,0.98,0.97,0.97,0.96,0.965,0.99,0.98,0.985
-Transfer_VGG,transfer_vgg_2019-07-14-21:24,190410_newdata_smote,,0.847,1,0.917,1,0.82,0.901,1,1,1
-Transfer_VGG,transfer_vgg_2019-07-14-21:24_best,190410_newdata_smote,,0.86,0.98,0.916,0.966,0.84,0.898,1,0.99,0.995
+TS_CNN,tscnn_keras_2019-05-25-10:56_best,190410_newdata_smote,"[a2,a1b1,a1b2]",0.893,0.92,0.906,0.906,0.87,0.888,0.98,0.99,0.971
+Transfer_YOLO,transfer_yolo_2019-05-27-14:28,190410_newdata_smote,,0.901,1,0.948,0.989,0.87,0.926,0.98,0.99,0.995
+Transfer_YOLO,transfer_yolo_2019-05-27-14:28_best,190410_newdata_smote,,0.95,0.96,0.955,0.95,0.95,0.95,1,0.99,0.985
+TS_Transfer_YOLO,tstransfer_yolo_keras_2019-05-30-20:54_best,190410_newdata_smote,,0.961,0.98,0.97,0.97,0.96,0.965,0.99,0.98,0.995
+Transfer_VGG,transfer_vgg_2019-07-14-21:24,190410_newdata_smote,,0.847,1,0.917,0.82,1,0.901,1,1,0.99
+Transfer_VGG,transfer_vgg_2019-07-14-21:24_best,190410_newdata_smote,,0.86,0.98,0.916,0.966,0.84,0.898,1,0.99,
+TS_Transfer_VGG,tstransfer_vgg_keras_2019-07-16-16:28_best,190410_newdata_smote,,0.89,0.97,0.928,0.956,0.87,0.911,0.98,0.98,0.974
