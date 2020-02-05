@@ -76,13 +76,13 @@ def test(args):
     x_vali=load_all_valid(x_vali_list,args)
     x_vali=x_vali.reshape((len(x_vali),-1))
     y_pred=model.predict(x_vali)
-    y_pred=y_pred.reshape((len(y_pred),1))
-    y_ture=np.argmax(y_vali,axis=1)
+    y_pred=y_pred.reshape((len(y_pred)))
+    y_true=np.argmax(y_vali,axis=1)
     print(y_true.shape)
     print(y_pred.shape)
     labels=['negative','positive','polluted']
-    plot_confusion_matrix(y_ture,y_pred,labels)
-    evaluate(y_ture,y_pred)
+    plot_confusion_matrix(y_true,y_pred,labels)
+    evaluate(y_true,y_pred)
 
 def dev(args):
     model=get_model(args)
@@ -101,7 +101,7 @@ if __name__=="__main__":
     parser.add_argument('--epoch',type=int,default=200,help='Epochs')
     parser.add_argument('--balance',action='store_true',help='Balance data by undersampling the majiroty data')
     parser.add_argument('--n_labels',type=int,default=3)
-    parser.add_argument('--data',type=str,default='190408_newdata',help='Dataset')
+    parser.add_argument('--data',type=str,default='190410_newdata',help='Dataset')
     parser.add_argument('--augment',action='store_true')
     args=parser.parse_args()
 
@@ -128,7 +128,7 @@ if __name__=="__main__":
         if args.model==None:
             print("Please specify model with -m or --model")
         else:
-            if 'pkl' not in args.model:
+            if 'pickle' not in args.model:
                 for r,_,fs in os.walk('./models'):
                     for f in fs:
                         if args.model in f:
