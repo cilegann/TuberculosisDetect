@@ -91,21 +91,22 @@ def read_x_y_mapping(mappings,basedirs,train_or_vali,shuffle,args,txt=False):
 def read_mapping(mapping_file,shuffle,args,txt=False):
     file_list=[]
     y=[]
+    print("Reading "+mapping_file)
     with open(mapping_file,'r') as f:
         next(f)
         lines=f.readlines()
         for line in lines:
             file_list.append(line.split(',')[0])
-            y.append(line.split(',')[1][:-1])
+            y.append(int(line.split(',')[1].replace("\n","")))
     if(shuffle):
         c=list(zip(file_list,y))
         random.shuffle(c)
         file_list,y=zip(*c)
         indexes=[-1,-1,-1]
     else:
-        s0=y.index('0')
-        s1=y.index('1')
-        s2=y.index('2')
+        s0=y.index(0)
+        s1=y.index(1)
+        s2=y.index(2)
         e0=s1-1
         e1=s2-1
         e2=len(y)-1
@@ -119,9 +120,9 @@ def read_mapping(mapping_file,shuffle,args,txt=False):
         random.shuffle(fln)
         random.shuffle(flp)
         random.shuffle(flx)
-        print(len(fln))
-        print(len(flp))
-        print(len(flx))
+        print("Negative: " + str(len(fln)))
+        print("Positive: " + str(len(flp)))
+        print("Polluted: " + str(len(flx)))
         file_list=fln+flp+flx
     return file_list,np_utils.to_categorical(np.array(y),args.n_labels),indexes
 
