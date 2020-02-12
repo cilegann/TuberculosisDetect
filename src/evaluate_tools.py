@@ -37,7 +37,7 @@ def plot_confusion_matrix_by_cm(cmx,classes,filename='cm',title='Confusion matri
     print("\n CONFUSION MATRIX")
     print(cmx)
     #plt.show()
-    plt.figure()
+    plt.figure(figsize=(5, 5), dpi=300)
     plt.imshow(cmx,interpolation='nearest',cmap=cmap)
     plt.title(title)
     plt.colorbar()
