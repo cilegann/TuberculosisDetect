@@ -34,6 +34,8 @@ def train(args):
     x_vali=x_vali.reshape((len(x_vali),-1))
     if args.balance:
         steps=min(np.asarray([indexes[i][2] for i in range(3)]))//(args.batch//3)
+        if args.oversample:
+            steps=min(np.asarray([indexes[i][2] for i in range(3)]))//(args.batch//3)
     else:
         steps=int(len(x_train_list))//int(args.batch)
     try:
@@ -99,7 +101,8 @@ if __name__=="__main__":
     parser.add_argument('--height',type=int,default=131)
     parser.add_argument('--batch',type=int,default=32,help='Batch size')
     parser.add_argument('--epoch',type=int,default=200,help='Epochs')
-    parser.add_argument('--balance',action='store_true',help='Balance data by undersampling the majiroty data')
+    parser.add_argument('--balance',action='store_true',help='Balance data by undersampling (default) / oversampling data')
+    parser.add_argument('--oversample',action='store_true',help='Balance data in oversampling mode')
     parser.add_argument('--n_labels',type=int,default=3)
     parser.add_argument('--data',type=str,default='190410_newdata',help='Dataset')
     parser.add_argument('--augment',action='store_true')
