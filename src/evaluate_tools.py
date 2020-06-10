@@ -78,3 +78,18 @@ def evaluate(y_true,y_pred):
     print("\nSCOREs\n"+t.draw()+"\n")
     pass
 
+
+from keras.callbacks import Callback
+class IntervalEvaluation(Callback):
+    def __init__(self, validation_data=()):
+        super(Callback, self).__init__()
+        self.X_val, self.y_val = validation_data
+
+    def on_epoch_end(self, epoch, logs={}):
+        y_pred = self.model.predict(self.X_val, verbose=0)
+        y_pred=np.argmax(y_pred,axis=1)
+        y_ture=np.argmax(self.y_val,axis=1)
+        labels=['negative','positive','polluted']
+        plot_confusion_matrix(y_ture,y_pred,labels)
+        evaluate(y_ture,y_pred)
+            
