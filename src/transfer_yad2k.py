@@ -10,9 +10,7 @@ import keras
 import keras.backend as K
 from keras import utils as np_utils
 from keras.preprocessing import image
-from keras.applications.vgg16 import preprocess_input
 from keras import Sequential
-from keras.applications.vgg16 import VGG16
 from keras.models import load_model,Model
 from keras.utils import multi_gpu_model
 from keras.layers import *
@@ -23,7 +21,7 @@ import keras.backend.tensorflow_backend as KTF
 
 import numpy as np
 from utils import *
-from evaluate_tools import cam,plot_confusion_matrix,evaluate
+from evaluate_tools import cam,plot_confusion_matrix,evaluate,IntervalEvaluation
 
 def config_environment(args):
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
@@ -33,12 +31,13 @@ def config_environment(args):
     KTF.set_session(session)
 
 def get_model(args):
-    model = VGG16(weights='imagenet', include_top=True)
-    for l in model.layers:
+    model = load_model('./src/yolo9000_yad2k.h5')
+    for i,l in enumerate(model.layers):
         l.trainable=False
-    model.layers.pop()
-    model.layers.pop()
-    hidden=Dropout(0.5)(model.layers[-2].output)
+        model.layers[i].name='yolo_'+l.name
+    hidden=BatchNormalization()(model.get_layer('yolo_leaky_re_lu_18').output)
+    hidden=Flatten()(hidden)
+    hidden=Dropout(0.5)(hidden)
     hidden=Dense(32,activation='relu')(hidden)
     hidden=BatchNormalization()(hidden)
     x=Dense(args.n_labels, activation='softmax')(hidden)
@@ -61,17 +60,18 @@ def train(model):
     print("#########################################")
     scriptBackuper(os.path.basename(__file__),nowtime)
     jst=model.to_json()
-    with open('./models/transfer_vgg_'+nowtime+'_json.json','w') as file:
+    with open('./models/transfer_yad2k_'+nowtime+'_json.json','w') as file:
         file.write(jst)
-    cblog = CSVLogger('./log/transfer_vgg_'+nowtime+'.csv')
-    cbtb = TensorBoard(log_dir=('./Graph/'+"transfer_vgg_"+nowtime.replace("-","").replace(":","")),batch_size=args.batch)
-    cbckpt=ModelCheckpoint('./models/transfer_vgg_'+nowtime+'_best.h5',monitor='val_loss',save_best_only=True)
-    cbckptw=ModelCheckpoint('./models/transfer_vgg_'+nowtime+'_best_weight.h5',monitor='val_loss',save_best_only=True,save_weights_only=True)
+    cblog = CSVLogger('./log/transfer_yad2k_'+nowtime+'.csv')
+    cbtb = TensorBoard(log_dir=('./Graph/'+"transfer_yad2k_"+nowtime.replace("-","").replace(":","")),batch_size=args.batch)
+    cbckpt=ModelCheckpoint('./models/transfer_yad2k_'+nowtime+'_best.h5',monitor='val_loss',save_best_only=True)
+    cbckptw=ModelCheckpoint('./models/transfer_yad2k_'+nowtime+'_best_weight.h5',monitor='val_loss',save_best_only=True,save_weights_only=True)
     cbes=EarlyStopping(monitor='val_loss', patience=10, verbose=0, mode='auto')
-    cbrlr=ReduceLROnPlateau(monitor='val_loss',patience=5)
+    cbrlr=ReduceLROnPlateau(monitor='val_loss',patience=2)
     x_train_list,y_train,indexes=read_mapping(args.mappings[0],not args.balance,args)
     x_vali_list,y_vali,_=read_mapping(args.mappings[1],False,args)
     x_vali=load_all_valid(x_vali_list,args)
+    cbeval = IntervalEvaluation(validation_data=(x_vali, y_vali))
     try:
         model.fit_generator(
             data_generator(True,x_train_list,y_train,args,indexes),
@@ -81,11 +81,11 @@ def train(model):
             steps_per_epoch=min(np.asarray([indexes[i][2] for i in range(3)]))//(args.batch//3) if args.balance else int(len(x_train_list))//int(args.batch),
             #steps_per_epoch=int(len(x_train_list))//int(batch_size),
             epochs=args.epochs,
-            callbacks=[cblog,cbtb,cbckpt,cbckptw,cbes,cbrlr]
+            callbacks=[cblog,cbtb,cbckpt,cbckptw,cbes,cbrlr,cbeval]
             #class_weight=([0.092,0.96,0.94] if not args.balance else [1,1,1])
         )
-        model.save('./models/transfer_vgg_'+nowtime+'.h5')
-        model.save_weights('./models/transfer_vgg_'+nowtime+'_weight.h5')
+        model.save('./models/transfer_yad2k_'+nowtime+'.h5')
+        model.save_weights('./models/transfer_yad2k_'+nowtime+'_weight.h5')
         
         y_pred=model.predict(x_vali)
         y_pred=np.argmax(y_pred,axis=1)
@@ -135,8 +135,8 @@ if __name__ == "__main__":
     parser.add_argument('--dev',action='store_true',help='Dev mode')
     parser.add_argument('-m','--model',type=str,help='The model you want to test on')
     parser.add_argument('--best',action='store_true',help='Load best model or not')
-    parser.add_argument('--width',type=int,default=224)
-    parser.add_argument('--height',type=int,default=224)
+    parser.add_argument('--width',type=int,default=416)
+    parser.add_argument('--height',type=int,default=416)
     parser.add_argument('--batch',type=int,default=64,help='Batch size')
     parser.add_argument('--epochs',type=int,default=200,help='#Epochs')
     parser.add_argument('--balance',action='store_true',help='Balance data by undersampling the majiroty data')

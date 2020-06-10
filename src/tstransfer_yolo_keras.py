@@ -113,6 +113,27 @@ def test(args):
     plot_confusion_matrix(y_ture,y_pred,labels)
     evaluate(y_ture,y_pred)
 
+def testBatch(args):
+    model=load_model(args.model)
+    x_vali_list,y_vali,_=read_mapping(args.mappings[1],False,args,txt=True)
+    idx=0
+    y_pred=[]
+    while(idx<len(x_vali_list)):
+        print(idx)
+        x=load_all_valid(x_vali_list[idx:idx+args.batch],args,txt=True)
+        y_pred+=model.predict(x).tolist()
+        idx+=args.batch
+    y_pred=np.asarray(y_pred)
+    y_pred=np.argmax(y_pred,axis=1)
+    y_vali=np.argmax(y_vali,axis=1)
+    labels=['negative','positive','polluted']
+    plot_confusion_matrix(y_vali,y_pred,labels)
+    evaluate(y_vali,y_pred)
+    with open('./20200520_TYGH_result_v1.csv','w') as file:
+        file.write("path,real,pred\n")
+        for x,yr,yp in zip(x_vali_list,y_vali,y_pred):
+            file.write(x+","+str(yr)+","+str(yp)+"\n")
+
 def dev(args):
     model=get_model(args)
 
@@ -121,6 +142,7 @@ if __name__=="__main__":
     parser=argparse.ArgumentParser(description="Two stage transfer learning on TB")
     parser.add_argument('--train',action='store_true',help='Training mode')
     parser.add_argument('--test',action='store_true',help='Testing mode')
+    parser.add_argument('--testbatch',action='store_true',help='Batch Testing mode')
     parser.add_argument('--dev',action='store_true',help='Dev mode')
     parser.add_argument('-m','--model',type=str,help='The model you want to test on')
     parser.add_argument('--best',action='store_true',help='Load best model or not')
@@ -168,6 +190,23 @@ if __name__=="__main__":
                                 args.model=os.path.join(r,f)
                                 print("Model:",args.model)
             test(args)
+    if args.testbatch:
+        print("Batch Testing mode")
+        if args.model==None:
+            print("Please specify model with -m or --model")
+        else:
+            if 'h5' not in args.model:
+                for r,_,fs in os.walk('./models'):
+                    for f in fs:
+                        if args.model in f:
+                            if 'best.h5' in f and args.best:
+                                args.model=os.path.join(r,f)
+                                print("Model:",args.model)
+                            elif 'best' not in f and '.h5' in f and not args.best:
+                                args.model=os.path.join(r,f)
+                                print("Model:",args.model)
+            testBatch(args)
+
     if args.dev:
         print("Dev mode")
         print(args.model)
