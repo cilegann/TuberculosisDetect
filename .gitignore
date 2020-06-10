@@ -1,5 +1,4 @@
 *.jpg
-
 *.h5
 *.PNG
 *.png
@@ -17,6 +16,7 @@ data_vali_equal_v1/
 exp_data/
 data_new/
 yolo-9000/
+data_200519_testing/
 .DS_Store
 *.pyc
 *.DS_Store
